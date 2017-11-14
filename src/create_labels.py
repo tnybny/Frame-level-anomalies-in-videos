@@ -1,0 +1,47 @@
+import numpy as np
+
+# ground truth of which frames are anomalous by manual image inspection, only test videos have anomalous frames
+labels = list()
+labels.append(range(59, 152))
+labels.append(range(49, 175))
+labels.append(range(90, 200))
+labels.append(range(30, 168))
+labels.append(range(4, 90) + range(139, 200))
+labels.append(range(0, 100) + range(109, 200))
+labels.append(range(0, 175))
+labels.append(range(0, 94))
+labels.append(range(0, 48))
+labels.append(range(0, 140))
+labels.append(range(69, 165))
+labels.append(range(129, 200))
+labels.append(range(0, 156))
+labels.append(range(0, 200))
+labels.append(range(137, 200))
+labels.append(range(122, 200))
+labels.append(range(0, 47))
+labels.append(range(53, 120))
+labels.append(range(63, 138))
+labels.append(range(44, 175))
+labels.append(range(30, 200))
+labels.append(range(15, 107))
+labels.append(range(7, 165))
+labels.append(range(49, 171))
+labels.append(range(39, 135))
+labels.append(range(76, 144))
+labels.append(range(9, 122))
+labels.append(range(104, 200))
+labels.append(range(0, 15) + range(44, 113))
+labels.append(range(174, 200))
+labels.append(range(0, 180))
+labels.append(range(0, 52) + range(64, 115))
+labels.append(range(4, 165))
+labels.append(range(0, 121))
+labels.append(range(85, 200))
+labels.append(range(14, 108))
+
+test_labels = np.array([0] * 36 * 200)
+for vidid in range(len(labels)):
+    for i in labels[vidid]:
+        test_labels[vidid * 200 + i] = 1
+
+np.save('../data/labels.npy', test_labels)
