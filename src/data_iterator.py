@@ -21,10 +21,9 @@ class DataIterator(object):
         batch = np.zeros(shape=(self.batch_size, TVOL) + self.train[0].shape)
         for i in xrange(self.batch_size):
             vid_idx = np.random.randint(0, self.train.shape[0] / FRAMES_PER_VIDEO)
-            aug_idx = np.random.randint(1, 4)
-            frame_idx = np.random.randint(0, FRAMES_PER_VIDEO - TVOL * aug_idx)
+            frame_idx = np.random.randint(0, FRAMES_PER_VIDEO - TVOL)
             batch[i] = self.train[(FRAMES_PER_VIDEO * vid_idx + frame_idx):
-                                  (FRAMES_PER_VIDEO * vid_idx + frame_idx + TVOL * aug_idx):aug_idx]
+                                  (FRAMES_PER_VIDEO * vid_idx + frame_idx + TVOL)]
         return batch
 
     def get_test_batch(self):
