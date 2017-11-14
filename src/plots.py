@@ -30,9 +30,9 @@ def plot_auc(aucs, path):
     plt.savefig(os.path.join(path, "AUC.png"))
 
 
-def plot_regularity(regularity_scores, labels, path):
+def plot_pfe(pfe, labels, path):
     """
-    plot regularity score vs. frame number and shade anomalous background using ground truth labels
+    plot per frame error vs. frame number and shade anomalous background using ground truth labels
     for each video in the test set
     """
     num_test_vids = 36
@@ -41,7 +41,7 @@ def plot_regularity(regularity_scores, labels, path):
         plt.figure()
         start = vid_id * frames_per_video
         end = start + 200
-        y_ax = regularity_scores[np.arange(start, end)]
+        y_ax = pfe[np.arange(start, end)]
         plt.plot(np.arange(1, frames_per_video + 1), y_ax, linewidth=0.5)
         plt.xlabel("Frame number")
         plt.ylabel("Regularity score")

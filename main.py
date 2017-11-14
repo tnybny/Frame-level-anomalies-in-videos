@@ -30,4 +30,6 @@ if __name__ == "__main__":
     d = DataIterator(P_TRAIN, P_TEST, P_LABELS, batch_size=BATCH_SIZE)
     stae = SpatialTemporalAutoencoder(alpha=ALPHA, batch_size=BATCH_SIZE, lambd=LAMBDA)
 
-    train(data=d, model=stae, num_iteration=NUM_ITER, result_path=result_path)
+    area_under_roc, equal_error_rate = train(data=d, model=stae, num_iteration=NUM_ITER, result_path=result_path)
+    logging.info("Best area under the roc curve: {0:g}".format(area_under_roc))
+    logging.info("Equal error rate corresponding to best auc: {0:g}".format(equal_error_rate))
