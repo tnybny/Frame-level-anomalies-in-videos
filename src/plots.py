@@ -44,8 +44,8 @@ def plot_pfe(pfe, labels, path):
         y_ax = pfe[np.arange(start, end)]
         plt.plot(np.arange(1, frames_per_video + 1), y_ax, linewidth=0.5)
         plt.xlabel("Frame number")
-        plt.ylabel("Regularity score")
+        plt.ylabel("Reconstruction error")
         for i in xrange(start, end):
             if labels[i] == 1:
                 plt.axvspan(i - start, i + 1 - start, facecolor='salmon', alpha=0.5)
-        plt.savefig(os.path.join(path, "Regularity_vid{0:d}.png".format(vid_id + 1)))
+        plt.savefig(os.path.join(path, "PFE_vid{0:d}.png".format(vid_id + 1)))
