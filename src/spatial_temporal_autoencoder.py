@@ -16,9 +16,7 @@ NUM_RNN_LAYERS = 3
 class SpatialTemporalAutoencoder(object):
     def __init__(self, alpha, batch_size, lambd):
         self.x_ = tf.placeholder(tf.float32, [None, TVOL, HEIGHT, WIDTH, NCHANNELS])
-        self.y_ = tf.placeholder(tf.float32, [None, TVOL, HEIGHT, WIDTH, NCHANNELS])
         self.phase = tf.placeholder(tf.bool, name='is_training')
-        # usually y_ = x_ if reconstruction error objective
 
         self.batch_size = batch_size
         w_init = tf.contrib.layers.xavier_initializer_conv2d()
@@ -38,9 +36,9 @@ class SpatialTemporalAutoencoder(object):
         self.y = self.spatial_decoder(self.convLSTMed)
         self.y = tf.reshape(self.y, shape=[-1, TVOL, HEIGHT, WIDTH, NCHANNELS])
 
-        self.per_frame_recon_errors = tf.reduce_mean(tf.pow(self.y_ - self.y, 2), axis=[2, 3, 4])
+        self.per_frame_recon_errors = tf.reduce_sum(tf.square(self.x_ - self.y), axis=[2, 3, 4])
 
-        self.reconstruction_loss = tf.reduce_mean(tf.pow(self.y_ - self.y, 2))
+        self.reconstruction_loss = 0.5 * tf.reduce_mean(self.per_frame_recon_errors)
         self.vars = tf.trainable_variables()
         self.regularization_loss = tf.add_n([tf.nn.l2_loss(v) for v in self.vars if 'bias' not in v.name])
         self.loss = self.reconstruction_loss + lambd * self.regularization_loss
@@ -143,13 +141,13 @@ class SpatialTemporalAutoencoder(object):
         return deconv2
 
     def get_loss(self, x, is_training):
-        return self.loss.eval(feed_dict={self.x_: x, self.y_: x, self.phase: is_training}, session=self.sess)
+        return self.loss.eval(feed_dict={self.x_: x, self.phase: is_training}, session=self.sess)
 
     def step(self, x, is_training):
-        self.sess.run(self.optimizer, feed_dict={self.x_: x, self.y_: x, self.phase: is_training})
+        self.sess.run(self.optimizer, feed_dict={self.x_: x, self.phase: is_training})
 
     def get_recon_errors(self, x, is_training):
-        return self.per_frame_recon_errors.eval(feed_dict={self.x_: x, self.y_: x, self.phase: is_training},
+        return self.per_frame_recon_errors.eval(feed_dict={self.x_: x, self.phase: is_training},
                                                 session=self.sess)
 
     def save_model(self):
