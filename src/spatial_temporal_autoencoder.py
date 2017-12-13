@@ -130,11 +130,12 @@ class SpatialTemporalAutoencoder(object):
         """
         _, _, h, w, c = x.get_shape().as_list()
         x = tf.reshape(x, shape=[-1, h, w, c])
-        newh = h - 1 + self.params['c_w_2'].get_shape().as_list()[0]
-        neww = w - 1 + self.params['c_w_2'].get_shape().as_list()[1]
+        first_deconv_stride = 2
+        newh = (h - 1) * first_deconv_stride + self.params['c_w_2'].get_shape().as_list()[0]
+        neww = (w - 1) * first_deconv_stride + self.params['c_w_2'].get_shape().as_list()[1]
         deconv1 = self.deconv2d(x, self.params['c_w_2'], self.params['c_b_2'],
                                 [self.batch_size * TVOL, newh, neww, DECONV1],
-                                activation=tf.nn.relu, strides=2, phase=self.phase)
+                                activation=tf.nn.relu, strides=first_deconv_stride, phase=self.phase)
         deconv2 = self.deconv2d(deconv1, self.params['c_w_1'], self.params['c_b_1'],
                                 [self.batch_size * TVOL, HEIGHT, WIDTH, DECONV2],
                                 activation=tf.nn.relu, strides=4, phase=self.phase, last=True)
