@@ -34,6 +34,7 @@ class SpatialTemporalAutoencoder(object):
         self.conved = self.spatial_encoder(self.x_)
         self.convLSTMed = self.temporal_encoder_decoder(self.conved)
         self.y = self.spatial_decoder(self.convLSTMed)
+        self.y = tf.clip_by_value(self.y, 0., 1.)
         self.y = tf.reshape(self.y, shape=[-1, TVOL, HEIGHT, WIDTH, NCHANNELS])
 
         self.per_frame_recon_errors = tf.reduce_sum(tf.square(self.x_ - self.y), axis=[2, 3, 4])
