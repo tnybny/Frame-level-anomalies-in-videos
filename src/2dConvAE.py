@@ -1,16 +1,16 @@
 import tensorflow as tf
-from conv_lstm_cell import ConvLSTMCell
 
 # network architecture definition
 NCHANNELS = 1
-CONV1 = 128
-CONV2 = 64
-DECONV1 = 128
-DECONV2 = 1
+CONV1 = 512
+CONV2 = 256
+CONV3 = 128
+DECONV1 = 256
+DECONV2 = 512
+DECONV3 = 10
 WIDTH = 227
 HEIGHT = 227
 TVOL = 10
-NUM_RNN_LAYERS = 3
 
 
 class SpatialTemporalAutoencoder(object):
@@ -21,19 +21,22 @@ class SpatialTemporalAutoencoder(object):
         self.batch_size = batch_size
         w_init = tf.contrib.layers.xavier_initializer_conv2d()
         self.params = {
-            "c_w1": tf.get_variable("c_weight1", shape=[11, 11, NCHANNELS, CONV1], initializer=w_init),
+            "c_w1": tf.get_variable("c_weight1", shape=[11, 11, TVOL, CONV1], initializer=w_init),
             "c_b1": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV1]), name="c_bias1"),
             "c_w2": tf.get_variable("c_weight2", shape=[5, 5, CONV1, CONV2], initializer=w_init),
             "c_b2": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV2]), name="c_bias2"),
-            "c_w_2": tf.get_variable("c_weight_2", shape=[5, 5, DECONV1, CONV2], initializer=w_init),
-            "c_b_2": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[DECONV1]), name="c_bias_2"),
-            "c_w_1": tf.get_variable("c_weight_1", shape=[11, 11, DECONV2, DECONV1], initializer=w_init),
-            "c_b_1": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[DECONV2]), name="c_bias_1")
+            "c_w3": tf.get_variable("c_weight3", shape=[3, 3, CONV2, CONV3], initializer=w_init),
+            "c_b3": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV3]), name="c_bias3"),
+            "c_w_3": tf.get_variable("c_weight_3", shape=[3, 3, DECONV1, CONV2], initializer=w_init),
+            "c_b_3": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[DECONV1]), name="c_bias_3")
+            "c_w_2": tf.get_variable("c_weight_2", shape=[5, 5, DECONV2, DECONV1], initializer=w_init),
+            "c_b_2": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[DECONV2]), name="c_bias_2"),
+            "c_w_1": tf.get_variable("c_weight_1", shape=[11, 11, DECONV3, DECONV2], initializer=w_init),
+            "c_b_1": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[DECONV3]), name="c_bias_1")
         }
 
         self.conved = self.spatial_encoder(self.x_)
-        self.convLSTMed = self.temporal_encoder_decoder(self.conved)
-        self.y = self.spatial_decoder(self.convLSTMed)
+        self.y = self.spatial_decoder(self.conved)
         self.y = tf.clip_by_value(self.y, 0., 1.)
         self.y = tf.reshape(self.y, shape=[-1, TVOL, HEIGHT, WIDTH, NCHANNELS])
 
@@ -103,25 +106,9 @@ class SpatialTemporalAutoencoder(object):
                             phase=self.phase)
         conv2 = self.conv2d(conv1, self.params['c_w2'], self.params['c_b2'], activation=tf.nn.relu, strides=2,
                             phase=self.phase)
-        return conv2
-
-    def temporal_encoder_decoder(self, x):
-        """
-        Build a temporal encoder-decoder network that uses convLSTM layers to perform sequential operation
-        :param x: convolved representation of input volume of shape (batch_size * TVOL, h, w, c)
-        :return: convLSTMed representation (batch_size, TVOL, h, w, c)
-        """
-        _, h, w, c = x.get_shape().as_list()
-        x = tf.reshape(x, shape=[-1, TVOL, h, w, c])
-        x = tf.unstack(x, axis=1)
-        num_filters = [64, 32, 64]
-        filter_sizes = [[3, 3], [3, 3], [3, 3]]
-        cell = tf.nn.rnn_cell.MultiRNNCell(
-            [ConvLSTMCell(shape=[h, w], num_filters=num_filters[i], filter_size=filter_sizes[i], layer_id=i)
-             for i in xrange(NUM_RNN_LAYERS)])
-        states_series, _ = tf.nn.static_rnn(cell, x, dtype=tf.float32)
-        output = tf.transpose(tf.stack(states_series, axis=0), [1, 0, 2, 3, 4])
-        return output
+        conv3 = self.conv2d(conv2, self.params['c_w3'], self.params['c_b3'], activation=tf.nn.relu, strides=1,
+                            phase=self.phase)
+        return conv3
 
     def spatial_decoder(self, x):
         """
@@ -131,16 +118,22 @@ class SpatialTemporalAutoencoder(object):
         """
         _, _, h, w, c = x.get_shape().as_list()
         x = tf.reshape(x, shape=[-1, h, w, c])
-        first_deconv_stride = 2
-        newh = (h - 1) * first_deconv_stride + self.params['c_w_2'].get_shape().as_list()[0]
-        neww = (w - 1) * first_deconv_stride + self.params['c_w_2'].get_shape().as_list()[1]
-        deconv1 = self.deconv2d(x, self.params['c_w_2'], self.params['c_b_2'],
+        stride = 1
+        newh = stride * (h - 1) + self.params['c_w_3'].get_shape().as_list()[0]
+        neww = stride * (w - 1) + self.params['c_w_3'].get_shape().as_list()[1]
+        deconv1 = self.deconv2d(x, self.params['c_w_3'], self.params['c_b_3'],
                                 [self.batch_size * TVOL, newh, neww, DECONV1],
-                                activation=tf.nn.relu, strides=first_deconv_stride, phase=self.phase)
-        deconv2 = self.deconv2d(deconv1, self.params['c_w_1'], self.params['c_b_1'],
+                                activation=tf.nn.relu, strides=stride, phase=self.phase)
+        stride = 2
+        newh = stride * (h - 1) + self.params['c_w_2'].get_shape().as_list()[0]
+        neww = stride * (w - 1) + self.params['c_w_2'].get_shape().as_list()[1]
+        deconv2 = self.deconv2d(deconv1, self.params['c_w_2'], self.params['c_b_2'],
+                                [self.batch_size * TVOL, newh, neww, DECONV2],
+                                activation=tf.nn.relu, strides=stride, phase=self.phase)
+        deconv3 = self.deconv2d(deconv2, self.params['c_w_1'], self.params['c_b_1'],
                                 [self.batch_size * TVOL, HEIGHT, WIDTH, DECONV2],
                                 activation=tf.nn.relu, strides=4, phase=self.phase, last=True)
-        return deconv2
+        return deconv3
 
     def get_loss(self, x, is_training):
         return self.loss.eval(feed_dict={self.x_: x, self.phase: is_training}, session=self.sess)

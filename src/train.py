@@ -27,7 +27,7 @@ def train(data, model, num_iteration, result_path, print_every=100):
             if best_auc < auc:
                 best_auc = auc
                 best_eer = eer
-    model.save_model()
+                model.save_model()
     plot_loss(losses=losses, valid_losses=valid_losses, path=result_path)
     plot_auc(aucs=aucs, path=result_path)
     plot_pfe(pfe=per_frame_errors, labels=data.get_test_labels(), path=result_path)
