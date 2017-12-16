@@ -21,14 +21,14 @@ class ConvAE2d(object):
         self.batch_size = batch_size
         w_init = tf.contrib.layers.xavier_initializer_conv2d()
         self.params = {
-            "c_w1": tf.get_variable("c_weight1", shape=[11, 11, TVOL, CONV1], initializer=w_init),
+            "c_w1": tf.get_variable("c_weight1", shape=[11, 11, NCHANNELS, CONV1], initializer=w_init),
             "c_b1": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV1]), name="c_bias1"),
             "c_w2": tf.get_variable("c_weight2", shape=[5, 5, CONV1, CONV2], initializer=w_init),
             "c_b2": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV2]), name="c_bias2"),
             "c_w3": tf.get_variable("c_weight3", shape=[3, 3, CONV2, CONV3], initializer=w_init),
             "c_b3": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV3]), name="c_bias3"),
-            "c_w_3": tf.get_variable("c_weight_3", shape=[3, 3, DECONV1, CONV2], initializer=w_init),
-            "c_b_3": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[DECONV1]), name="c_bias_3")
+            "c_w_3": tf.get_variable("c_weight_3", shape=[3, 3, DECONV1, CONV3], initializer=w_init),
+            "c_b_3": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[DECONV1]), name="c_bias_3"),
             "c_w_2": tf.get_variable("c_weight_2", shape=[5, 5, DECONV2, DECONV1], initializer=w_init),
             "c_b_2": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[DECONV2]), name="c_bias_2"),
             "c_w_1": tf.get_variable("c_weight_1", shape=[11, 11, DECONV3, DECONV2], initializer=w_init),
@@ -37,7 +37,7 @@ class ConvAE2d(object):
 
         self.conved = self.spatial_encoder(self.x_)
         self.y = self.spatial_decoder(self.conved)
-        self.y = tf.clip_by_value(self.y, 0., 1.)
+        self.y = tf.clip_by_value(self.y, -1., 1.)
         self.y = tf.reshape(self.y, shape=[-1, TVOL, HEIGHT, WIDTH, NCHANNELS])
 
         self.per_frame_recon_errors = tf.reduce_sum(tf.square(self.x_ - self.y), axis=[2, 3, 4])
@@ -116,13 +116,14 @@ class ConvAE2d(object):
         :param x: tensor of some transformed representation of input of shape (batch_size, TVOL, h, w, c)
         :return: deconvolved representation of shape (batch_size * TVOL, HEIGHT, WEIGHT, NCHANNELS)
         """
-        _, h, w, c = x.get_shape().as_list()
+        _, h, w, _ = x.get_shape().as_list()
         stride = 1
         newh = stride * (h - 1) + self.params['c_w_3'].get_shape().as_list()[0]
         neww = stride * (w - 1) + self.params['c_w_3'].get_shape().as_list()[1]
         deconv1 = self.deconv2d(x, self.params['c_w_3'], self.params['c_b_3'],
                                 [self.batch_size * TVOL, newh, neww, DECONV1],
                                 activation=tf.nn.relu, strides=stride, phase=self.phase)
+        h, w = newh, neww
         stride = 2
         newh = stride * (h - 1) + self.params['c_w_2'].get_shape().as_list()[0]
         neww = stride * (w - 1) + self.params['c_w_2'].get_shape().as_list()[1]
@@ -130,7 +131,7 @@ class ConvAE2d(object):
                                 [self.batch_size * TVOL, newh, neww, DECONV2],
                                 activation=tf.nn.relu, strides=stride, phase=self.phase)
         deconv3 = self.deconv2d(deconv2, self.params['c_w_1'], self.params['c_b_1'],
-                                [self.batch_size * TVOL, HEIGHT, WIDTH, DECONV2],
+                                [self.batch_size * TVOL, HEIGHT, WIDTH, DECONV3],
                                 activation=tf.nn.relu, strides=4, phase=self.phase, last=True)
         return deconv3
 

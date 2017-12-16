@@ -20,7 +20,7 @@ train, test = np.asarray(train), np.asarray(test)
 train, test = train.reshape((train.shape + (1, ))),  test.reshape((test.shape + (1, )))
 
 # centering
-tr_mu, tr_sigma = np.mean(train, axis=0), np.std(train, axis=0)
-train, test = (train - tr_mu) / tr_sigma, (test - tr_mu) / tr_sigma
+tr_mu = np.mean(train, axis=0)
+train, test = train - tr_mu, test - tr_mu
 
 np.save('../data/train.npy', train), np.save('../data/test.npy', test)
