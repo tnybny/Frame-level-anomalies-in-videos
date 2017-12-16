@@ -13,7 +13,7 @@ HEIGHT = 227
 TVOL = 10
 
 
-class SpatialTemporalAutoencoder(object):
+class ConvAE2d(object):
     def __init__(self, alpha, batch_size, lambd):
         self.x_ = tf.placeholder(tf.float32, [None, TVOL, HEIGHT, WIDTH, NCHANNELS])
         self.phase = tf.placeholder(tf.bool, name='is_training')
