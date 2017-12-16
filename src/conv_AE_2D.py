@@ -116,8 +116,7 @@ class ConvAE2d(object):
         :param x: tensor of some transformed representation of input of shape (batch_size, TVOL, h, w, c)
         :return: deconvolved representation of shape (batch_size * TVOL, HEIGHT, WEIGHT, NCHANNELS)
         """
-        _, _, h, w, c = x.get_shape().as_list()
-        x = tf.reshape(x, shape=[-1, h, w, c])
+        _, h, w, c = x.get_shape().as_list()
         stride = 1
         newh = stride * (h - 1) + self.params['c_w_3'].get_shape().as_list()[0]
         neww = stride * (w - 1) + self.params['c_w_3'].get_shape().as_list()[1]
