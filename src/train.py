@@ -13,7 +13,7 @@ def train(data, model, num_iteration, result_path, print_every=100):
     best_auc, best_eer = 0, 0
     for i in xrange(num_iteration + 1):
         tr_batch = data.get_train_batch()
-        loss = model.batch_train(tr_batch, tr_batch)
+        loss = model.batch_train(tr_batch)
         losses.append(loss)
         if i % print_every == 0:
             logging.info("average training reconstruction loss over {0:d} iterations: {1:g}"
