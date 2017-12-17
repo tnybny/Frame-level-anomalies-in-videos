@@ -32,6 +32,7 @@ Perform anomaly detection in videos using neural network architectures such as 2
     * spatial_temporal_autoencoder.py: implements a spatial-temporal auto-encoder which is an RNN that uses convLSTM cells in between conv and deconv of a convAE.
     * train.py: implements functions to run the network in training and testing modes by interacting with the data iterator and a model.
     * utils.py: implements helper functions.
+6. main.py: read the config file, start logging, initalize data iterator and model builder and perform training.
 
 ## Authors
 1. Bharathkumar "Tiny" Ramachandra: tnybny at gmail dot com
