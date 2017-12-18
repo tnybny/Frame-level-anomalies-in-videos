@@ -2,11 +2,11 @@ import tensorflow as tf
 
 # network architecture definition
 NCHANNELS = 1
-CONV1 = 512
-CONV2 = 256
-CONV3 = 128
-DECONV1 = 256
-DECONV2 = 512
+CONV1 = 256
+CONV2 = 128
+CONV3 = 64
+DECONV1 = 128
+DECONV2 = 256
 DECONV3 = 10
 WIDTH = 227
 HEIGHT = 227
