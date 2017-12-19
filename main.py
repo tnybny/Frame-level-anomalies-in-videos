@@ -7,6 +7,7 @@ import logging
 import os
 import time
 import datetime
+import numpy as np
 from src.train import train
 
 
@@ -21,6 +22,7 @@ if __name__ == "__main__":
     P_TRAIN = Config.get("Default", "P_TRAIN")
     P_TEST = Config.get("Default", "P_TEST")
     P_LABELS = Config.get("Default", "P_LABELS")
+    P_CLIP_PARAMS = Config.get("Default", "P_CLIP_PARAMS")
     METHOD = Config.get("Default", "METHOD")
 
     ts = time.time()
@@ -30,10 +32,11 @@ if __name__ == "__main__":
     logging.basicConfig(filename=os.path.join(result_path, "info.log"), level=logging.INFO)
 
     d = DataIterator(P_TRAIN, P_TEST, P_LABELS, batch_size=BATCH_SIZE)
+    clip_params = np.load(P_CLIP_PARAMS)
     if METHOD == 'STAE':
-        net = SpatialTemporalAutoencoder(alpha=ALPHA, batch_size=BATCH_SIZE, lambd=LAMBDA)
+        net = SpatialTemporalAutoencoder(alpha=ALPHA, batch_size=BATCH_SIZE, lambd=LAMBDA, clip_params=clip_params)
     elif METHOD == 'CONVAE2D':
-        net = ConvAE2d(alpha=ALPHA, batch_size=BATCH_SIZE, lambd=LAMBDA)
+        net = ConvAE2d(alpha=ALPHA, batch_size=BATCH_SIZE, lambd=LAMBDA, clip_params=clip_params)
     else:
         raise ValueError('Incorrect method specification')
 

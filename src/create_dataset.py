@@ -24,3 +24,6 @@ tr_mu = np.mean(train, axis=0)
 train, test = train - tr_mu, test - tr_mu
 
 np.save('../data/train.npy', train), np.save('../data/test.npy', test)
+
+clip_params = np.asarray([np.min(train), np.max(train)])
+np.save('../data/clip_params.npy', clip_params)

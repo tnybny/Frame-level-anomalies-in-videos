@@ -14,7 +14,7 @@ TVOL = 10
 
 
 class ConvAE2d(object):
-    def __init__(self, alpha, batch_size, lambd):
+    def __init__(self, alpha, batch_size, lambd, clip_params):
         self.x_ = tf.placeholder(tf.float32, [None, TVOL, HEIGHT, WIDTH, NCHANNELS])
         self.phase = tf.placeholder(tf.bool, name='is_training')
 
@@ -37,7 +37,7 @@ class ConvAE2d(object):
 
         self.conved = self.spatial_encoder(self.x_)
         self.y = self.spatial_decoder(self.conved)
-        self.y = tf.clip_by_value(self.y, -1., 1.)
+        self.y = tf.clip_by_value(self.y, clip_params[0], clip_params[1])
         self.y = tf.reshape(self.y, shape=[-1, TVOL, HEIGHT, WIDTH, NCHANNELS])
 
         self.per_frame_recon_errors = tf.reduce_sum(tf.square(self.x_ - self.y), axis=[2, 3, 4])
