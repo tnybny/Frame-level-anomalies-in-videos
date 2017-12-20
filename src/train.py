@@ -48,8 +48,22 @@ def test(data, model):
                 if frame_indices[i, j] != -1:
                     per_frame_error[frame_indices[i, j]].append(frame_error[i, j])
     per_frame_average_error = np.asarray(map(lambda x: np.mean(x), per_frame_error))
-    auc = roc_auc_score(y_true=data.get_test_labels(), y_score=per_frame_average_error)
+    # min-max normalize to linearly scale into [0, 1] per video
+    abnorm_scores = per_video_abnorm_scores(per_frame_average_error)
+    auc = roc_auc_score(y_true=data.get_test_labels(), y_score=abnorm_scores)
     valid_loss = np.mean(per_frame_average_error[data.get_test_labels() == 0])
-    fpr, tpr, thresholds = roc_curve(y_true=data.get_test_labels(), y_score=per_frame_average_error, pos_label=1)
+    fpr, tpr, thresholds = roc_curve(y_true=data.get_test_labels(), y_score=abnorm_scores, pos_label=1)
     eer = compute_eer(far=fpr, frr=1 - tpr)
     return per_frame_average_error, auc, eer, valid_loss
+
+
+def per_video_abnorm_scores(per_frame_error, num_frames_per_video=200):
+    if per_frame_error.shape[0] % num_frames_per_video != 0:
+        raise ValueError('Not all videos have same number of frames')
+    num_videos = int(per_frame_error.shape[0] / num_frames_per_video)
+    abnorm_scores = np.zeros((per_frame_error.shape[0], ))
+    for i in xrange(num_videos):
+        index_range = np.arange(i * num_frames_per_video, (i + 1) * num_frames_per_video)
+        abnorm_scores[index_range] = (per_frame_error[index_range] - per_frame_error[index_range].min()) / \
+                                     (per_frame_error[index_range].max() - per_frame_error[index_range].min())
+    return abnorm_scores
