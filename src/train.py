@@ -25,16 +25,16 @@ def train(data, model, num_iteration, result_path, print_every=100):
             eers.append(eer)
             valid_losses.append(valid_loss)
             if best_auc < auc:
-                best_auc = auc
-                best_eer = eer
                 model.save_model()
+    model.restore_model()
+    per_frame_errors, auc, eer, valid_loss = test(data, model)
     plot_loss(losses=losses, valid_losses=valid_losses, path=result_path)
     plot_auc(aucs=aucs, path=result_path)
     plot_pfe(pfe=per_frame_errors, labels=data.get_test_labels(), path=result_path)
     np.save(os.path.join(result_path, "aucs.npy"), aucs)
     np.save(os.path.join(result_path, "losses.npy"), losses)
     np.save(os.path.join(result_path, "per_frame_errors.npy"), per_frame_errors)
-    return best_auc, best_eer
+    return auc, eer
 
 
 def test(data, model):
