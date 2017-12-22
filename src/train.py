@@ -25,6 +25,7 @@ def train(data, model, num_iteration, result_path, print_every=100):
             eers.append(eer)
             valid_losses.append(valid_loss)
             if best_auc < auc:
+                best_auc = auc
                 model.save_model()
     model.restore_model()
     per_frame_errors, auc, eer, valid_loss = test(data, model)
