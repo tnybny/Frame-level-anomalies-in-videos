@@ -30,16 +30,19 @@ if __name__ == "__main__":
     result_path = os.path.join("results", "archive", METHOD, dt)
     os.makedirs(result_path)
     logging.basicConfig(filename=os.path.join(result_path, "info.log"), level=logging.INFO)
+    model_path = os.path.join("models", METHOD, dt)
+    os.makedirs(model_path)
 
     d = DataIterator(P_TRAIN, P_TEST, P_LABELS, batch_size=BATCH_SIZE)
     clip_params = np.load(P_CLIP_PARAMS)
     if METHOD == 'STAE':
-        net = SpatialTemporalAutoencoder(alpha=ALPHA, batch_size=BATCH_SIZE, lambd=LAMBDA, clip_params=clip_params)
+        net = SpatialTemporalAutoencoder(alpha=ALPHA, batch_size=BATCH_SIZE, lambd=LAMBDA)
     elif METHOD == 'CONVAE2D':
-        net = ConvAE2d(alpha=ALPHA, batch_size=BATCH_SIZE, lambd=LAMBDA, clip_params=clip_params)
+        net = ConvAE2d(alpha=ALPHA, batch_size=BATCH_SIZE, lambd=LAMBDA)
     else:
         raise ValueError('Incorrect method specification')
 
-    area_under_roc, equal_error_rate = train(data=d, model=net, num_iteration=NUM_ITER, result_path=result_path)
+    area_under_roc, equal_error_rate = train(data=d, model=net, num_iteration=NUM_ITER, result_path=result_path,
+                                             model_path=model_path)
     logging.info("Best area under the roc curve: {0:g}".format(area_under_roc))
     logging.info("Equal error rate corresponding to best auc: {0:g}".format(equal_error_rate))

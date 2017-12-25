@@ -7,7 +7,7 @@ from src.utils import compute_eer
 from sklearn.metrics import roc_auc_score, roc_curve
 
 
-def train(data, model, num_iteration, result_path, print_every=100):
+def train(data, model, num_iteration, result_path, model_path, print_every=100):
     logging.info("Start training the network: {}".format(time.asctime(time.localtime(time.time()))))
     aucs, eers, losses, valid_losses = [], [], [], []
     best_auc, best_eer = 0, 0
@@ -26,14 +26,18 @@ def train(data, model, num_iteration, result_path, print_every=100):
             valid_losses.append(valid_loss)
             if best_auc < auc:
                 best_auc = auc
-                model.save_model()
-    model.restore_model()
-    per_frame_errors, auc, eer, valid_loss = test(data, model)
-    plot_loss(losses=losses, valid_losses=valid_losses, path=result_path)
-    plot_auc(aucs=aucs, path=result_path)
-    plot_pfe(pfe=per_frame_errors, labels=data.get_test_labels(), path=result_path)
+                model.save_model(model_path)
+    # store End of Training model and results
+    os.makedirs(os.path.join(model_path, "EoT"))
+    model.save_model(os.path.join(model_path, "EoT"))
     np.save(os.path.join(result_path, "aucs.npy"), aucs)
     np.save(os.path.join(result_path, "losses.npy"), losses)
+    plot_loss(losses=losses, valid_losses=valid_losses, path=result_path)
+    plot_auc(aucs=aucs, path=result_path)
+    # store best AUC model and results
+    model.restore_model(model_path)
+    per_frame_errors, auc, eer, valid_loss = test(data, model)
+    plot_pfe(pfe=per_frame_errors, labels=data.get_test_labels(), path=result_path)
     np.save(os.path.join(result_path, "per_frame_errors.npy"), per_frame_errors)
     return auc, eer
 

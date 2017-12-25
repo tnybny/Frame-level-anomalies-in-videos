@@ -1,5 +1,6 @@
 import tensorflow as tf
 from conv_lstm_cell import ConvLSTMCell
+import os
 
 # network architecture definition
 NCHANNELS = 1
@@ -14,7 +15,7 @@ NUM_RNN_LAYERS = 3
 
 
 class SpatialTemporalAutoencoder(object):
-    def __init__(self, alpha, batch_size, lambd, clip_params):
+    def __init__(self, alpha, batch_size, lambd):
         self.x_ = tf.placeholder(tf.float32, [None, TVOL, HEIGHT, WIDTH, NCHANNELS])
         self.phase = tf.placeholder(tf.bool, name='is_training')
 
@@ -34,7 +35,6 @@ class SpatialTemporalAutoencoder(object):
         self.conved = self.spatial_encoder(self.x_)
         self.convLSTMed = self.temporal_encoder_decoder(self.conved)
         self.y = self.spatial_decoder(self.convLSTMed)
-        self.y = tf.clip_by_value(self.y, clip_params[0], clip_params[1])
         self.y = tf.reshape(self.y, shape=[-1, TVOL, HEIGHT, WIDTH, NCHANNELS])
 
         self.per_frame_recon_errors = tf.reduce_sum(tf.square(self.x_ - self.y), axis=[2, 3, 4])
@@ -152,11 +152,11 @@ class SpatialTemporalAutoencoder(object):
         return self.per_frame_recon_errors.eval(feed_dict={self.x_: x, self.phase: is_training},
                                                 session=self.sess)
 
-    def save_model(self):
-        self.saver.save(self.sess, "models/model.ckpt")
+    def save_model(self, path):
+        self.saver.save(self.sess, os.path.join(path, "model.ckpt"))
 
-    def restore_model(self):
-        self.saver.restore(self.sess, "models/model.ckpt")
+    def restore_model(self, path):
+        self.saver.restore(self.sess, os.path.join(path, "model.ckpt"))
 
     def batch_reconstruct(self, x):
         return self.y.eval(feed_dict={self.x_: x, self.phase: False}, session=self.sess)
