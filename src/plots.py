@@ -17,6 +17,7 @@ def plot_loss(losses, valid_losses, path):
     plt.ylabel("Total loss")
     plt.legend(loc='upper right')
     plt.savefig(os.path.join(path, "Loss.png"))
+    plt.close()
 
 
 def plot_auc(aucs, path):
@@ -28,6 +29,7 @@ def plot_auc(aucs, path):
     plt.xlabel("Training progress (# iter / constant)")
     plt.ylabel("Area under the roc curve")
     plt.savefig(os.path.join(path, "AUC.png"))
+    plt.close()
 
 
 def plot_pfe(pfe, labels, path):
@@ -49,3 +51,4 @@ def plot_pfe(pfe, labels, path):
             if labels[i] == 1:
                 plt.axvspan(i - start, i + 1 - start, facecolor='salmon', alpha=0.5)
         plt.savefig(os.path.join(path, "PFE_vid{0:d}.png".format(vid_id + 1)))
+        plt.close()
