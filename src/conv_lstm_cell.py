@@ -19,7 +19,7 @@ class ConvLSTMCell(tf.nn.rnn_cell.RNNCell):
     def call(self, x, state):
         """
         Perform convLSTM cell ops given input at a given state
-        :param x: (tensor) input image of shape [batch_size, timesteps, H, W, channels]
+        :param x: (tensor) input video clips of shape [batch_size, timesteps, H, W, featmaps]
         :param state: (tuple) previous memory and hidden states of the cell
         :return: new state after performing convLSTM ops given input and previous state
         """

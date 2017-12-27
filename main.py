@@ -19,6 +19,7 @@ if __name__ == "__main__":
     ALPHA = float(Config.get("Default", "ALPHA"))
     LAMBDA = float(Config.get("Default", "LAMBDA"))
     BATCH_SIZE = int(Config.get("Default", "BATCH_SIZE"))
+    TVOL = int(Config.get("Default", "TVOL"))
     P_TRAIN = Config.get("Default", "P_TRAIN")
     P_TEST = Config.get("Default", "P_TEST")
     P_LABELS = Config.get("Default", "P_LABELS")
@@ -36,9 +37,9 @@ if __name__ == "__main__":
     d = DataIterator(P_TRAIN, P_TEST, P_LABELS, batch_size=BATCH_SIZE)
     clip_params = np.load(P_CLIP_PARAMS)
     if METHOD == 'STAE':
-        net = SpatialTemporalAutoencoder(alpha=ALPHA, batch_size=BATCH_SIZE, lambd=LAMBDA)
+        net = SpatialTemporalAutoencoder(tvol=TVOL, alpha=ALPHA, batch_size=BATCH_SIZE, lambd=LAMBDA)
     elif METHOD == 'CONVAE2D':
-        net = ConvAE2d(alpha=ALPHA, batch_size=BATCH_SIZE, lambd=LAMBDA)
+        net = ConvAE2d(tvol=TVOL, alpha=ALPHA, batch_size=BATCH_SIZE, lambd=LAMBDA)
     else:
         raise ValueError('Incorrect method specification')
 

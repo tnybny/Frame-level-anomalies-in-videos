@@ -6,17 +6,19 @@ import os
 NCHANNELS = 1
 CONV1 = 128
 CONV2 = 64
+CLSTM1 = 64
+CLSTM2 = 32
+CLSTM3 = 64
 DECONV1 = 128
 DECONV2 = 1
 WIDTH = 227
 HEIGHT = 227
-TVOL = 10
-NUM_RNN_LAYERS = 3
 
 
 class SpatialTemporalAutoencoder(object):
-    def __init__(self, alpha, batch_size, lambd):
-        self.x_ = tf.placeholder(tf.float32, [None, TVOL, HEIGHT, WIDTH, NCHANNELS])
+    def __init__(self, tvol, alpha, batch_size, lambd):
+        self.x_ = tf.placeholder(tf.float32, [None, self.tvol, HEIGHT, WIDTH, NCHANNELS])
+        self.tvol = tvol
         self.phase = tf.placeholder(tf.bool, name='is_training')
 
         self.batch_size = batch_size
@@ -26,7 +28,7 @@ class SpatialTemporalAutoencoder(object):
             "c_b1": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV1]), name="c_bias1"),
             "c_w2": tf.get_variable("c_weight2", shape=[5, 5, CONV1, CONV2], initializer=w_init),
             "c_b2": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV2]), name="c_bias2"),
-            "c_w_2": tf.get_variable("c_weight_2", shape=[5, 5, DECONV1, CONV2], initializer=w_init),
+            "c_w_2": tf.get_variable("c_weight_2", shape=[5, 5, DECONV1, CLSTM3], initializer=w_init),
             "c_b_2": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[DECONV1]), name="c_bias_2"),
             "c_w_1": tf.get_variable("c_weight_1", shape=[11, 11, DECONV2, DECONV1], initializer=w_init),
             "c_b_1": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[DECONV2]), name="c_bias_1")
@@ -35,7 +37,7 @@ class SpatialTemporalAutoencoder(object):
         self.conved = self.spatial_encoder(self.x_)
         self.convLSTMed = self.temporal_encoder_decoder(self.conved)
         self.y = self.spatial_decoder(self.convLSTMed)
-        self.y = tf.reshape(self.y, shape=[-1, TVOL, HEIGHT, WIDTH, NCHANNELS])
+        self.y = tf.reshape(self.y, shape=[-1, self.tvol, HEIGHT, WIDTH, NCHANNELS])
 
         self.per_frame_recon_errors = tf.reduce_sum(tf.square(self.x_ - self.y), axis=[2, 3, 4])
 
@@ -94,8 +96,8 @@ class SpatialTemporalAutoencoder(object):
     def spatial_encoder(self, x):
         """
         Build a spatial encoder that performs convolutions
-        :param x: tensor of input image of shape (batch_size, TVOL, HEIGHT, WIDTH, NCHANNELS)
-        :return: convolved representation of shape (batch_size * TVOL, h, w, c)
+        :param x: tensor of input image of shape (batch_size, self.tvol, HEIGHT, WIDTH, NCHANNELS)
+        :return: convolved representation of shape (batch_size * self.tvol, h, w, c)
         """
         _, _, h, w, c = x.get_shape().as_list()
         x = tf.reshape(x, shape=[-1, h, w, c])
@@ -108,17 +110,17 @@ class SpatialTemporalAutoencoder(object):
     def temporal_encoder_decoder(self, x):
         """
         Build a temporal encoder-decoder network that uses convLSTM layers to perform sequential operation
-        :param x: convolved representation of input volume of shape (batch_size * TVOL, h, w, c)
-        :return: convLSTMed representation (batch_size, TVOL, h, w, c)
+        :param x: convolved representation of input volume of shape (batch_size * self.tvol, h, w, c)
+        :return: convLSTMed representation (batch_size, self.tvol, h, w, c)
         """
         _, h, w, c = x.get_shape().as_list()
-        x = tf.reshape(x, shape=[-1, TVOL, h, w, c])
+        x = tf.reshape(x, shape=[-1, self.tvol, h, w, c])
         x = tf.unstack(x, axis=1)
-        num_filters = [64, 32, 64]
+        num_filters = [CLSTM1, CLSTM2, CLSTM3]
         filter_sizes = [[3, 3], [3, 3], [3, 3]]
         cell = tf.nn.rnn_cell.MultiRNNCell(
             [ConvLSTMCell(shape=[h, w], num_filters=num_filters[i], filter_size=filter_sizes[i], layer_id=i)
-             for i in xrange(NUM_RNN_LAYERS)])
+             for i in xrange(len(num_filters))])
         states_series, _ = tf.nn.static_rnn(cell, x, dtype=tf.float32)
         output = tf.transpose(tf.stack(states_series, axis=0), [1, 0, 2, 3, 4])
         return output
@@ -126,8 +128,8 @@ class SpatialTemporalAutoencoder(object):
     def spatial_decoder(self, x):
         """
         Build a spatial decoder that performs deconvolutions on the input
-        :param x: tensor of some transformed representation of input of shape (batch_size, TVOL, h, w, c)
-        :return: deconvolved representation of shape (batch_size * TVOL, HEIGHT, WEIGHT, NCHANNELS)
+        :param x: tensor of some transformed representation of input of shape (batch_size, self.tvol, h, w, c)
+        :return: deconvolved representation of shape (batch_size * self.tvol, HEIGHT, WEIGHT, NCHANNELS)
         """
         _, _, h, w, c = x.get_shape().as_list()
         x = tf.reshape(x, shape=[-1, h, w, c])
@@ -135,10 +137,10 @@ class SpatialTemporalAutoencoder(object):
         newh = (h - 1) * first_deconv_stride + self.params['c_w_2'].get_shape().as_list()[0]
         neww = (w - 1) * first_deconv_stride + self.params['c_w_2'].get_shape().as_list()[1]
         deconv1 = self.deconv2d(x, self.params['c_w_2'], self.params['c_b_2'],
-                                [self.batch_size * TVOL, newh, neww, DECONV1],
+                                [self.batch_size * self.tvol, newh, neww, DECONV1],
                                 activation=tf.nn.relu, strides=first_deconv_stride, phase=self.phase)
         deconv2 = self.deconv2d(deconv1, self.params['c_w_1'], self.params['c_b_1'],
-                                [self.batch_size * TVOL, HEIGHT, WIDTH, DECONV2],
+                                [self.batch_size * self.tvol, HEIGHT, WIDTH, DECONV2],
                                 activation=tf.nn.relu, strides=4, phase=self.phase, last=True)
         return deconv2
 
