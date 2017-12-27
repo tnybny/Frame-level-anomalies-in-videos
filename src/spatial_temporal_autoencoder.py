@@ -17,8 +17,8 @@ HEIGHT = 227
 
 class SpatialTemporalAutoencoder(object):
     def __init__(self, tvol, alpha, batch_size, lambd):
-        self.x_ = tf.placeholder(tf.float32, [None, self.tvol, HEIGHT, WIDTH, NCHANNELS])
         self.tvol = tvol
+        self.x_ = tf.placeholder(tf.float32, [None, self.tvol, HEIGHT, WIDTH, NCHANNELS])
         self.phase = tf.placeholder(tf.bool, name='is_training')
 
         self.batch_size = batch_size
