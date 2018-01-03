@@ -20,7 +20,7 @@ def train(data, model, num_iteration, result_path, model_path, print_every=100):
                          .format(print_every, np.mean(losses[-print_every:])))
             per_frame_errors, auc, eer, valid_loss = test(data, model)
             logging.info("frame level area under the roc curve at iteration {0:d}: {1:g}".format(i, auc))
-            logging.info("validation loss at iteration {0:d}: {1:g}".format(i, valid_loss))
+            logging.info("un-regularized validation loss at iteration {0:d}: {1:g}".format(i, valid_loss))
             aucs.append(auc)
             eers.append(eer)
             valid_losses.append(valid_loss)

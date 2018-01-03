@@ -12,7 +12,8 @@ def plot_loss(losses, valid_losses, path):
     plt.figure()
     plt.plot(range(len(losses)), losses, 'b', alpha=0.6, linewidth=0.5, label="training loss")
     valid_loss_every = (len(losses) - 1) / (len(valid_losses) - 1)
-    plt.plot(range(0, len(losses), valid_loss_every), valid_losses, 'r', linewidth=0.5, label="validation loss")
+    plt.plot(range(0, len(losses), valid_loss_every), valid_losses, 'r', linewidth=0.5,
+             label="un-regularized validation loss")
     plt.xlabel("Iteration")
     plt.ylabel("Total loss")
     plt.legend(loc='upper right')
