@@ -2,6 +2,7 @@ from __future__ import print_function, division
 from src.spatial_temporal_autoencoder import SpatialTemporalAutoencoder
 from src.data_iterator import DataIterator
 from src.conv_AE_2D import ConvAE2d
+from src.experimental import Experiment
 import ConfigParser
 import logging
 import os
@@ -40,6 +41,8 @@ if __name__ == "__main__":
         net = SpatialTemporalAutoencoder(tvol=TVOL, alpha=ALPHA, batch_size=BATCH_SIZE, lambd=LAMBDA)
     elif METHOD == 'CONVAE2D':
         net = ConvAE2d(tvol=TVOL, alpha=ALPHA, batch_size=BATCH_SIZE, lambd=LAMBDA)
+    elif METHOD == 'EXP':
+        net = Experiment(tvol=TVOL, alpha=ALPHA, batch_size=BATCH_SIZE, lambd=LAMBDA)
     else:
         raise ValueError('Incorrect method specification')
 
