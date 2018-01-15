@@ -4,12 +4,12 @@ import os
 
 # network architecture definition
 NCHANNELS = 1
-CONV1 = 128
+CONV1 = 64
 CONV2 = 64
 CLSTM1 = 64
 CLSTM2 = 32
 CLSTM3 = 64
-DECONV1 = 128
+DECONV1 = 64
 DECONV2 = 1
 WIDTH = 227
 HEIGHT = 227
@@ -28,9 +28,9 @@ class Experiment(object):
             "c_b1": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV1]), name="c_bias1"),
             "c_w2": tf.get_variable("c_weight2", shape=[5, 5, CONV1, CONV2], initializer=w_init),
             "c_b2": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV2]), name="c_bias2"),
-            "c_w_2": tf.get_variable("c_weight_2", shape=[3, 3, DECONV1, CLSTM3], initializer=w_init),
+            "c_w_2": tf.get_variable("c_weight_2", shape=[3, 3, CLSTM3, DECONV1], initializer=w_init),
             "c_b_2": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[DECONV1]), name="c_bias_2"),
-            "c_w_1": tf.get_variable("c_weight_1", shape=[3, 3, DECONV2, DECONV1], initializer=w_init),
+            "c_w_1": tf.get_variable("c_weight_1", shape=[3, 3, DECONV1, DECONV2], initializer=w_init),
             "c_b_1": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[DECONV2]), name="c_bias_1")
         }
 
@@ -79,7 +79,7 @@ class Experiment(object):
         :param x: input
         :param w: filter
         :param b: bias
-        :param out_shape: shape of output tensor
+        :param out_shape: output height and width after NN-resizing
         :param activation: activation func
         :param strides: the stride when filter is scanning
         :param phase: training phase or not
@@ -110,7 +110,7 @@ class Experiment(object):
         conv2 = self.conv2d(conv1, self.params['c_w2'], self.params['c_b2'], activation=tf.nn.relu, strides=2,
                             phase=self.phase)
         shapes.append(conv2.get_shape().as_list())
-        return conv2
+        return conv2, shapes
 
     def temporal_encoder_decoder(self, x):
         """
@@ -122,7 +122,7 @@ class Experiment(object):
         x = tf.reshape(x, shape=[-1, self.tvol, h, w, c])
         x = tf.unstack(x, axis=1)
         num_filters = [CLSTM1, CLSTM2, CLSTM3]
-        filter_sizes = [[3, 3], [3, 3], [3, 3]]
+        filter_sizes = [[3, 3] * len(num_filters)]
         cell = tf.nn.rnn_cell.MultiRNNCell(
             [ConvLSTMCell(shape=[h, w], num_filters=num_filters[i], filter_size=filter_sizes[i], layer_id=i)
              for i in xrange(len(num_filters))])
@@ -141,11 +141,9 @@ class Experiment(object):
         x = tf.reshape(x, shape=[-1, h, w, c])
         shapes = shapes[:-1]  # last convolution shape is the input here, discard
         _, newh, neww, _ = shapes[-1]
-        deconv1 = self.deconv2d(x, self.params['c_w_2'], self.params['c_b_2'],
-                                [self.batch_size * self.tvol, newh, neww, DECONV1],
-                                activation=tf.nn.relu, strides=1, phase=self.phase)
-        deconv2 = self.deconv2d(deconv1, self.params['c_w_1'], self.params['c_b_1'],
-                                [self.batch_size * self.tvol, HEIGHT, WIDTH, DECONV2],
+        deconv1 = self.deconv2d(x, self.params['c_w_2'], self.params['c_b_2'], [newh, neww], activation=tf.nn.relu,
+                                strides=1, phase=self.phase)
+        deconv2 = self.deconv2d(deconv1, self.params['c_w_1'], self.params['c_b_1'], [HEIGHT, WIDTH],
                                 activation=tf.nn.relu, strides=1, phase=self.phase, last=True)
         return deconv2
 
