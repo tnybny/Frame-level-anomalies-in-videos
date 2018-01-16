@@ -6,11 +6,12 @@ import os
 NCHANNELS = 1
 CONV1 = 64
 CONV2 = 64
-CLSTM1 = 64
+CONV3 = 64
+CONV4 = 32
+CLSTM1 = 32
 CLSTM2 = 32
-CLSTM3 = 64
-DECONV1 = 64
-DECONV2 = 1
+CLSTM3 = 32
+DECONV1 = 1
 WIDTH = 227
 HEIGHT = 227
 
@@ -24,14 +25,16 @@ class Experiment(object):
         self.batch_size = batch_size
         w_init = tf.contrib.layers.xavier_initializer_conv2d()
         self.params = {
-            "c_w1": tf.get_variable("c_weight1", shape=[11, 11, NCHANNELS, CONV1], initializer=w_init),
+            "c_w1": tf.get_variable("c_weight1", shape=[5, 5, NCHANNELS, CONV1], initializer=w_init),
             "c_b1": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV1]), name="c_bias1"),
-            "c_w2": tf.get_variable("c_weight2", shape=[5, 5, CONV1, CONV2], initializer=w_init),
+            "c_w2": tf.get_variable("c_weight2", shape=[3, 3, CONV1, CONV2], initializer=w_init),
             "c_b2": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV2]), name="c_bias2"),
-            "c_w_2": tf.get_variable("c_weight_2", shape=[3, 3, CLSTM3, DECONV1], initializer=w_init),
-            "c_b_2": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[DECONV1]), name="c_bias_2"),
-            "c_w_1": tf.get_variable("c_weight_1", shape=[3, 3, DECONV1, DECONV2], initializer=w_init),
-            "c_b_1": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[DECONV2]), name="c_bias_1")
+            "c_w3": tf.get_variable("c_weight2", shape=[3, 3, CONV2, CONV3], initializer=w_init),
+            "c_b3": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV3]), name="c_bias3"),
+            "c_w4": tf.get_variable("c_weight2", shape=[3, 3, CONV3, CONV4], initializer=w_init),
+            "c_b4": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV4]), name="c_bias4"),
+            "c_w_1": tf.get_variable("c_weight_1", shape=[3, 3, CLSTM3, DECONV1], initializer=w_init),
+            "c_b_1": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[DECONV1]), name="c_bias_1")
         }
 
         shapes = []
@@ -104,13 +107,19 @@ class Experiment(object):
         """
         _, _, h, w, c = x.get_shape().as_list()
         x = tf.reshape(x, shape=[-1, h, w, c])
-        conv1 = self.conv2d(x, self.params['c_w1'], self.params['c_b1'], activation=tf.nn.relu, strides=4,
+        conv1 = self.conv2d(x, self.params['c_w1'], self.params['c_b1'], activation=tf.nn.relu, strides=2,
                             phase=self.phase)
         shapes.append(conv1.get_shape().as_list())
-        conv2 = self.conv2d(conv1, self.params['c_w2'], self.params['c_b2'], activation=tf.nn.relu, strides=2,
+        conv2 = self.conv2d(conv1, self.params['c_w2'], self.params['c_b2'], activation=tf.nn.relu, strides=1,
                             phase=self.phase)
         shapes.append(conv2.get_shape().as_list())
-        return conv2, shapes
+        conv3 = self.conv2d(conv2, self.params['c_w3'], self.params['c_b3'], activation=tf.nn.relu, strides=1,
+                            phase=self.phase)
+        shapes.append(conv2.get_shape().as_list())
+        conv4 = self.conv2d(conv3, self.params['c_w4'], self.params['c_b4'], activation=tf.nn.relu, strides=1,
+                            phase=self.phase)
+        shapes.append(conv2.get_shape().as_list())
+        return conv4, shapes
 
     def temporal_encoder_decoder(self, x):
         """
@@ -141,11 +150,9 @@ class Experiment(object):
         x = tf.reshape(x, shape=[-1, h, w, c])
         shapes = shapes[:-1]  # last convolution shape is the input here, discard
         _, newh, neww, _ = shapes[-1]
-        deconv1 = self.deconv2d(x, self.params['c_w_2'], self.params['c_b_2'], [newh, neww], activation=tf.nn.relu,
-                                strides=1, phase=self.phase)
-        deconv2 = self.deconv2d(deconv1, self.params['c_w_1'], self.params['c_b_1'], [HEIGHT, WIDTH],
-                                activation=tf.nn.relu, strides=1, phase=self.phase, last=True)
-        return deconv2
+        deconv1 = self.deconv2d(x, self.params['c_w_1'], self.params['c_b_1'], [newh, neww], activation=tf.nn.relu,
+                                strides=1, phase=self.phase, last=True)
+        return deconv1
 
     def get_loss(self, x, is_training):
         return self.loss.eval(feed_dict={self.x_: x, self.phase: is_training}, session=self.sess)
