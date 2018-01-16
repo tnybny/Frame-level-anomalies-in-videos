@@ -125,7 +125,7 @@ class Experiment(object):
         x = tf.reshape(x, shape=[-1, self.tvol, h, w, c])
         x = tf.unstack(x, axis=1)
         num_filters = [CLSTM1, CLSTM2, CLSTM3]
-        filter_sizes = [[3, 3] * len(num_filters)]
+        filter_sizes = [[3, 3] for _ in xrange(len(num_filters))]
         cell = tf.nn.rnn_cell.MultiRNNCell(
             [ConvLSTMCell(shape=[h, w], num_filters=num_filters[i], filter_size=filter_sizes[i], layer_id=i)
              for i in xrange(len(num_filters))])
