@@ -8,9 +8,12 @@ CONV1 = 64
 CONV2 = 64
 CONV3 = 64
 CONV4 = 32
-CLSTM1 = 32
-CLSTM2 = 32
-CLSTM3 = 32
+CONV5 = 32
+CONV6 = 32
+CONV7 = 16
+CLSTM1 = 8
+CLSTM2 = 8
+CLSTM3 = 8
 DECONV1 = 1
 WIDTH = 227
 HEIGHT = 227
@@ -33,6 +36,12 @@ class Experiment(object):
             "c_b3": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV3]), name="c_bias3"),
             "c_w4": tf.get_variable("c_weight4", shape=[3, 3, CONV3, CONV4], initializer=w_init),
             "c_b4": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV4]), name="c_bias4"),
+            "c_w5": tf.get_variable("c_weight5", shape=[3, 3, CONV4, CONV5], initializer=w_init),
+            "c_b5": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV5]), name="c_bias5"),
+            "c_w6": tf.get_variable("c_weight6", shape=[3, 3, CONV5, CONV6], initializer=w_init),
+            "c_b6": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV6]), name="c_bias6"),
+            "c_w7": tf.get_variable("c_weight7", shape=[3, 3, CONV6, CONV7], initializer=w_init),
+            "c_b7": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV7]), name="c_bias7"),
             "c_w_1": tf.get_variable("c_weight_1", shape=[3, 3, CLSTM3, DECONV1], initializer=w_init),
             "c_b_1": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[DECONV1]), name="c_bias_1")
         }
@@ -113,7 +122,13 @@ class Experiment(object):
                             phase=self.phase)
         conv4 = self.conv2d(conv3, self.params['c_w4'], self.params['c_b4'], activation=tf.nn.relu, strides=1,
                             phase=self.phase)
-        return conv4
+        conv5 = self.conv2d(conv4, self.params['c_w5'], self.params['c_b5'], activation=tf.nn.relu, strides=1,
+                            phase=self.phase)
+        conv6 = self.conv2d(conv5, self.params['c_w6'], self.params['c_b6'], activation=tf.nn.relu, strides=1,
+                            phase=self.phase)
+        conv7 = self.conv2d(conv6, self.params['c_w7'], self.params['c_b7'], activation=tf.nn.relu, strides=1,
+                            phase=self.phase)
+        return conv7
 
     def temporal_encoder_decoder(self, x):
         """
