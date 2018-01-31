@@ -16,27 +16,24 @@ HEIGHT = 227
 class ConvAE2d(object):
     def __init__(self, tvol, alpha, batch_size, lambd):
         self.tvol = tvol
-        self.x_ = tf.placeholder(tf.float16, [None, self.tvol, HEIGHT, WIDTH, NCHANNELS])
+        self.x_ = tf.placeholder(tf.float32, [None, self.tvol, HEIGHT, WIDTH, NCHANNELS])
         self.phase = tf.placeholder(tf.bool, name='is_training')
 
         self.batch_size = batch_size
         w_init = tf.contrib.layers.xavier_initializer_conv2d()
         self.params = {
-            "c_w1": tf.get_variable("c_weight1", shape=[11, 11, NCHANNELS, CONV1], initializer=w_init,
-                                    dtype=tf.float16),
-            "c_b1": tf.Variable(tf.constant(0.01, dtype=tf.float16, shape=[CONV1]), name="c_bias1"),
-            "c_w2": tf.get_variable("c_weight2", shape=[5, 5, CONV1, CONV2], initializer=w_init, dtype=tf.float16),
-            "c_b2": tf.Variable(tf.constant(0.01, dtype=tf.float16, shape=[CONV2]), name="c_bias2"),
-            "c_w3": tf.get_variable("c_weight3", shape=[3, 3, CONV2, CONV3], initializer=w_init, dtype=tf.float16),
-            "c_b3": tf.Variable(tf.constant(0.01, dtype=tf.float16, shape=[CONV3]), name="c_bias3"),
-            "c_w_3": tf.get_variable("c_weight_3", shape=[3, 3, DECONV1, CONV3], initializer=w_init, dtype=tf.float16),
-            "c_b_3": tf.Variable(tf.constant(0.01, dtype=tf.float16, shape=[DECONV1]), name="c_bias_3"),
-            "c_w_2": tf.get_variable("c_weight_2", shape=[5, 5, DECONV2, DECONV1], initializer=w_init,
-                                     dtype=tf.float16),
-            "c_b_2": tf.Variable(tf.constant(0.01, dtype=tf.float16, shape=[DECONV2]), name="c_bias_2"),
-            "c_w_1": tf.get_variable("c_weight_1", shape=[11, 11, DECONV3, DECONV2], initializer=w_init,
-                                     dtype=tf.float16),
-            "c_b_1": tf.Variable(tf.constant(0.01, dtype=tf.float16, shape=[DECONV3]), name="c_bias_1")
+            "c_w1": tf.get_variable("c_weight1", shape=[11, 11, NCHANNELS, CONV1], initializer=w_init),
+            "c_b1": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV1]), name="c_bias1"),
+            "c_w2": tf.get_variable("c_weight2", shape=[5, 5, CONV1, CONV2], initializer=w_init),
+            "c_b2": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV2]), name="c_bias2"),
+            "c_w3": tf.get_variable("c_weight3", shape=[3, 3, CONV2, CONV3], initializer=w_init),
+            "c_b3": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV3]), name="c_bias3"),
+            "c_w_3": tf.get_variable("c_weight_3", shape=[3, 3, DECONV1, CONV3], initializer=w_init),
+            "c_b_3": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[DECONV1]), name="c_bias_3"),
+            "c_w_2": tf.get_variable("c_weight_2", shape=[5, 5, DECONV2, DECONV1], initializer=w_init),
+            "c_b_2": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[DECONV2]), name="c_bias_2"),
+            "c_w_1": tf.get_variable("c_weight_1", shape=[11, 11, DECONV3, DECONV2], initializer=w_init),
+            "c_b_1": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[DECONV3]), name="c_bias_1")
         }
 
         self.conved = self.spatial_encoder(self.x_)

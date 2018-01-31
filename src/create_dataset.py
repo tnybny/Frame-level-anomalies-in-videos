@@ -16,7 +16,7 @@ test = [np.array(Image.open(y).resize((227, 227), PIL.Image.ANTIALIAS)) for x in
 
 # rescale to [0, 1]
 train, test = [x / 255. for x in train], [x / 255. for x in test]
-train, test = np.asarray(train).astype('float16'), np.asarray(test).astype('float16')
+train, test = np.asarray(train).astype('float32'), np.asarray(test).astype('float32')
 train, test = np.expand_dims(train, axis=train.ndim),  np.expand_dims(test, axis=test.ndim)
 
 # centering
