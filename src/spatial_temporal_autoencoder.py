@@ -34,9 +34,10 @@ class SpatialTemporalAutoencoder(object):
             "c_b_1": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[DECONV2]), name="c_bias_1")
         }
 
-        self.conved = self.spatial_encoder(self.x_)
+        shapes = []
+        self.conved, shapes = self.spatial_encoder(self.x_, shapes)
         self.convLSTMed = self.temporal_encoder_decoder(self.conved)
-        self.y = self.spatial_decoder(self.convLSTMed)
+        self.y = self.spatial_decoder(self.convLSTMed, shapes)
         self.y = tf.reshape(self.y, shape=[-1, self.tvol, HEIGHT, WIDTH, NCHANNELS])
 
         self.per_frame_recon_errors = tf.reduce_sum(tf.square(self.x_ - self.y), axis=[2, 3, 4])
@@ -93,19 +94,22 @@ class SpatialTemporalAutoencoder(object):
             x = tf.contrib.layers.batch_norm(x, center=True, scale=True, is_training=phase)
             return activation(x)
 
-    def spatial_encoder(self, x):
+    def spatial_encoder(self, x, shapes):
         """
         Build a spatial encoder that performs convolutions
         :param x: tensor of input image of shape (batch_size, self.tvol, HEIGHT, WIDTH, NCHANNELS)
+        :param shapes: list of shapes of convolved objects, used to inform deconvolution output shapes
         :return: convolved representation of shape (batch_size * self.tvol, h, w, c)
         """
         _, _, h, w, c = x.get_shape().as_list()
         x = tf.reshape(x, shape=[-1, h, w, c])
         conv1 = self.conv2d(x, self.params['c_w1'], self.params['c_b1'], activation=tf.nn.relu, strides=4,
                             phase=self.phase)
+        shapes.append(conv1.get_shape().as_list())
         conv2 = self.conv2d(conv1, self.params['c_w2'], self.params['c_b2'], activation=tf.nn.relu, strides=2,
                             phase=self.phase)
-        return conv2
+        shapes.append(conv2.get_shape().as_list())
+        return conv2, shapes
 
     def temporal_encoder_decoder(self, x):
         """
@@ -125,20 +129,20 @@ class SpatialTemporalAutoencoder(object):
         output = tf.transpose(tf.stack(states_series, axis=0), [1, 0, 2, 3, 4])
         return output
 
-    def spatial_decoder(self, x):
+    def spatial_decoder(self, x, shapes):
         """
         Build a spatial decoder that performs deconvolutions on the input
         :param x: tensor of some transformed representation of input of shape (batch_size, self.tvol, h, w, c)
+        :param shapes: list of shapes of convolved objects, used to inform deconvolution output shapes
         :return: deconvolved representation of shape (batch_size * self.tvol, HEIGHT, WEIGHT, NCHANNELS)
         """
         _, _, h, w, c = x.get_shape().as_list()
         x = tf.reshape(x, shape=[-1, h, w, c])
-        first_deconv_stride = 2
-        newh = (h - 1) * first_deconv_stride + self.params['c_w_2'].get_shape().as_list()[0]
-        neww = (w - 1) * first_deconv_stride + self.params['c_w_2'].get_shape().as_list()[1]
+        shapes = shapes[:-1]  # last convolution shape is the input here, discard
+        _, newh, neww, _ = shapes[-1]
         deconv1 = self.deconv2d(x, self.params['c_w_2'], self.params['c_b_2'],
                                 [self.batch_size * self.tvol, newh, neww, DECONV1],
-                                activation=tf.nn.relu, strides=first_deconv_stride, phase=self.phase)
+                                activation=tf.nn.relu, strides=2, phase=self.phase)
         deconv2 = self.deconv2d(deconv1, self.params['c_w_1'], self.params['c_b_1'],
                                 [self.batch_size * self.tvol, HEIGHT, WIDTH, DECONV2],
                                 activation=tf.nn.relu, strides=4, phase=self.phase, last=True)
