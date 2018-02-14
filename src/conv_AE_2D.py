@@ -111,16 +111,14 @@ class ConvAE2d(object):
         x = tf.reshape(x, shape=[-1, h, w, c])
         conv1 = self.conv2d(x, self.params['c_w1'], self.params['c_b1'], activation=tf.nn.tanh, strides=4,
                             phase=self.phase)
-        shapes.append(conv1.get_shape().as_list())
         pool1 = tf.nn.max_pool(conv1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='VALID')
-        shapes.append(pool1.get_shape().as_list())
         conv2 = self.conv2d(pool1, self.params['c_w2'], self.params['c_b2'], activation=tf.nn.tanh, strides=1,
                             phase=self.phase)
-        shapes.append(conv2.get_shape().as_list())
         pool2 = tf.nn.max_pool(conv2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='VALID')
-        shapes.append(pool2.get_shape().as_list())
         conv3 = self.conv2d(pool2, self.params['c_w3'], self.params['c_b3'], activation=tf.nn.tanh, strides=1,
                             phase=self.phase)
+        shapes = shapes.extend([conv1.get_shape().as_list(), pool1.get_shape().as_list(), conv2.get_shape().as_list(),
+                                pool2.get_shape().as_list()])
         return conv3, shapes
 
     def spatial_decoder(self, x, shapes):
