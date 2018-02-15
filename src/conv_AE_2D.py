@@ -117,8 +117,8 @@ class ConvAE2d(object):
         pool2 = tf.nn.max_pool(conv2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='VALID')
         conv3 = self.conv2d(pool2, self.params['c_w3'], self.params['c_b3'], activation=tf.nn.tanh, strides=1,
                             phase=self.phase)
-        shapes = shapes.extend([conv1.get_shape().as_list(), pool1.get_shape().as_list(), conv2.get_shape().as_list(),
-                                pool2.get_shape().as_list()])
+        shapes.extend([conv1.get_shape().as_list(), pool1.get_shape().as_list(), conv2.get_shape().as_list(),
+                       pool2.get_shape().as_list()])
         return conv3, shapes
 
     def spatial_decoder(self, x, shapes):
