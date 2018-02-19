@@ -5,12 +5,8 @@ import os
 # network architecture definition
 NCHANNELS = 1
 CONV1 = 64
-CONV2 = 64
-CONV3 = 64
-CONV4 = 32
-CONV5 = 32
-CONV6 = 32
-CONV7 = 16
+CONV2 = 32
+CONV3 = 32
 CLSTM1 = 8
 CLSTM2 = 8
 CLSTM3 = 8
@@ -28,20 +24,12 @@ class Experiment(object):
         self.batch_size = batch_size
         w_init = tf.contrib.layers.xavier_initializer_conv2d()
         self.params = {
-            "c_w1": tf.get_variable("c_weight1", shape=[7, 7, NCHANNELS, CONV1], initializer=w_init),
+            "c_w1": tf.get_variable("c_weight1", shape=[11, 11, NCHANNELS, CONV1], initializer=w_init),
             "c_b1": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV1]), name="c_bias1"),
-            "c_w2": tf.get_variable("c_weight2", shape=[5, 5, CONV1, CONV2], initializer=w_init),
+            "c_w2": tf.get_variable("c_weight2", shape=[3, 3, CONV1, CONV2], initializer=w_init),
             "c_b2": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV2]), name="c_bias2"),
             "c_w3": tf.get_variable("c_weight3", shape=[3, 3, CONV2, CONV3], initializer=w_init),
             "c_b3": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV3]), name="c_bias3"),
-            "c_w4": tf.get_variable("c_weight4", shape=[3, 3, CONV3, CONV4], initializer=w_init),
-            "c_b4": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV4]), name="c_bias4"),
-            "c_w5": tf.get_variable("c_weight5", shape=[3, 3, CONV4, CONV5], initializer=w_init),
-            "c_b5": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV5]), name="c_bias5"),
-            "c_w6": tf.get_variable("c_weight6", shape=[3, 3, CONV5, CONV6], initializer=w_init),
-            "c_b6": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV6]), name="c_bias6"),
-            "c_w7": tf.get_variable("c_weight7", shape=[3, 3, CONV6, CONV7], initializer=w_init),
-            "c_b7": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV7]), name="c_bias7"),
             "c_w_1": tf.get_variable("c_weight_1", shape=[3, 3, CLSTM3, DECONV1], initializer=w_init),
             "c_b_1": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[DECONV1]), name="c_bias_1")
         }
@@ -114,21 +102,15 @@ class Experiment(object):
         """
         _, _, h, w, c = x.get_shape().as_list()
         x = tf.reshape(x, shape=[-1, h, w, c])
-        conv1 = self.conv2d(x, self.params['c_w1'], self.params['c_b1'], activation=tf.nn.relu, strides=2,
+        conv1 = self.conv2d(x, self.params['c_w1'], self.params['c_b1'], activation=tf.nn.tanh, strides=4,
                             phase=self.phase)
-        conv2 = self.conv2d(conv1, self.params['c_w2'], self.params['c_b2'], activation=tf.nn.relu, strides=2,
+        pool1 = tf.nn.max_pool(conv1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='VALID')
+        conv2 = self.conv2d(pool1, self.params['c_w2'], self.params['c_b2'], activation=tf.nn.tanh, strides=1,
                             phase=self.phase)
-        conv3 = self.conv2d(conv2, self.params['c_w3'], self.params['c_b3'], activation=tf.nn.relu, strides=1,
+        pool2 = tf.nn.max_pool(conv2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='VALID')
+        conv3 = self.conv2d(pool2, self.params['c_w3'], self.params['c_b3'], activation=tf.nn.tanh, strides=1,
                             phase=self.phase)
-        conv4 = self.conv2d(conv3, self.params['c_w4'], self.params['c_b4'], activation=tf.nn.relu, strides=1,
-                            phase=self.phase)
-        conv5 = self.conv2d(conv4, self.params['c_w5'], self.params['c_b5'], activation=tf.nn.relu, strides=1,
-                            phase=self.phase)
-        conv6 = self.conv2d(conv5, self.params['c_w6'], self.params['c_b6'], activation=tf.nn.relu, strides=1,
-                            phase=self.phase)
-        conv7 = self.conv2d(conv6, self.params['c_w7'], self.params['c_b7'], activation=tf.nn.relu, strides=1,
-                            phase=self.phase)
-        return conv7
+        return conv3
 
     def temporal_encoder_decoder(self, x):
         """
@@ -150,7 +132,7 @@ class Experiment(object):
 
     def spatial_decoder(self, x):
         """
-        Build a spatial decoder that performs deconvolutions on the input
+        Build a spatial decoder that performs a single linear resize convolution
         :param x: tensor of some transformed representation of input of shape (batch_size, self.tvol, h, w, c)
         :return: deconvolved representation of shape (batch_size * self.tvol, HEIGHT, WEIGHT, NCHANNELS)
         """

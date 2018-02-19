@@ -102,7 +102,7 @@ class ConvAE2d(object):
 
     def spatial_encoder(self, x, shapes):
         """
-        Build a spatial encoder that performs convolutions
+        Build a spatial encoder that performs convolutions and poolings
         :param x: tensor of input image of shape (batch_size, self.tvol, HEIGHT, WIDTH, NCHANNELS)
         :param shapes: list of shapes of convolved objects, used to inform deconvolution output shapes
         :return: convolved representation of shape (batch_size * self.tvol, h, w, c)
@@ -123,7 +123,7 @@ class ConvAE2d(object):
 
     def spatial_decoder(self, x, shapes):
         """
-        Build a spatial decoder that performs deconvolutions on the input
+        Build a spatial decoder that performs deconvolutions and unpoolings
         :param x: tensor of some transformed representation of input of shape (batch_size * self.tvol, h, w, c)
         :param shapes: list of shapes of convolved objects, used to inform deconvolution output shapes
         :return: deconvolved representation of shape (batch_size * self.tvol, HEIGHT, WEIGHT, NCHANNELS)
