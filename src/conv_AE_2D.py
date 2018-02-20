@@ -4,11 +4,11 @@ from tensorflow.python.ops import init_ops
 
 # network architecture definition
 NCHANNELS = 1
-CONV1 = 256
-CONV2 = 128
-CONV3 = 64
-DECONV1 = 128
-DECONV2 = 256
+CONV1 = 512
+CONV2 = 256
+CONV3 = 128
+DECONV1 = 256
+DECONV2 = 512
 DECONV3 = 1
 WIDTH = 227
 HEIGHT = 227
