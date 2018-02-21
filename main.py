@@ -21,7 +21,7 @@ if __name__ == "__main__":
     LAMBDA = float(Config.get("Default", "LAMBDA"))
     BATCH_SIZE = int(Config.get("Default", "BATCH_SIZE"))
     TVOL = int(Config.get("Default", "TVOL"))
-    TAUG = bool(int(Config.get("Default", "AUG")))
+    TAUG = bool(int(Config.get("Default", "TAUG")))
     P_TRAIN = Config.get("Default", "P_TRAIN")
     P_TEST = Config.get("Default", "P_TEST")
     P_LABELS = Config.get("Default", "P_LABELS")
