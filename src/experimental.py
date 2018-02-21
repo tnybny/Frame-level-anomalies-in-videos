@@ -8,8 +8,6 @@ CONV1 = 64
 CONV2 = 32
 CONV3 = 32
 CLSTM1 = 8
-CLSTM2 = 8
-CLSTM3 = 8
 DECONV1 = 1
 WIDTH = 227
 HEIGHT = 227
@@ -30,7 +28,7 @@ class Experiment(object):
             "c_b2": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV2]), name="c_bias2"),
             "c_w3": tf.get_variable("c_weight3", shape=[3, 3, CONV2, CONV3], initializer=w_init),
             "c_b3": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV3]), name="c_bias3"),
-            "c_w_1": tf.get_variable("c_weight_1", shape=[3, 3, CLSTM3, DECONV1], initializer=w_init),
+            "c_w_1": tf.get_variable("c_weight_1", shape=[3, 3, CLSTM1, DECONV1], initializer=w_init),
             "c_b_1": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[DECONV1]), name="c_bias_1")
         }
 
@@ -121,7 +119,7 @@ class Experiment(object):
         _, h, w, c = x.get_shape().as_list()
         x = tf.reshape(x, shape=[-1, self.tvol, h, w, c])
         x = tf.unstack(x, axis=1)
-        num_filters = [CLSTM1, CLSTM2, CLSTM3]
+        num_filters = [CLSTM1]
         filter_sizes = [[3, 3] for _ in xrange(len(num_filters))]
         cell = tf.nn.rnn_cell.MultiRNNCell(
             [ConvLSTMCell(shape=[h, w], num_filters=num_filters[i], filter_size=filter_sizes[i], layer_id=i)
