@@ -25,7 +25,7 @@ class DataIterator(object):
             vid_idx = np.random.randint(0, self.train.shape[0] / FRAMES_PER_VIDEO)
             if self._taug:
                 aug_idx = np.random.randint(1, 4)
-            frame_idx = np.random.randint(0, FRAMES_PER_VIDEO - self._tvol)
+            frame_idx = np.random.randint(0, FRAMES_PER_VIDEO - self._tvol * aug_idx)
             batch[i] = self.train[(FRAMES_PER_VIDEO * vid_idx + frame_idx):
                                   (FRAMES_PER_VIDEO * vid_idx + frame_idx + self._tvol * aug_idx):aug_idx]
         return batch
