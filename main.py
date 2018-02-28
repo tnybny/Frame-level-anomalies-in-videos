@@ -1,6 +1,6 @@
 from __future__ import print_function, division
 from src.spatial_temporal_autoencoder import SpatialTemporalAutoencoder
-from src.data_iterator import DataIterator
+from src.data_iterator import DataIterator, DataIteratorStae
 from src.conv_AE_2D import ConvAE2d
 from src.experimental import Experiment
 import ConfigParser
@@ -36,13 +36,15 @@ if __name__ == "__main__":
     model_path = os.path.join("models", METHOD, dt)
     os.makedirs(model_path)
 
-    d = DataIterator(P_TRAIN, P_TEST, P_LABELS, batch_size=BATCH_SIZE, tvol=TVOL, taug=TAUG)
     if METHOD == 'STAE':
         net = SpatialTemporalAutoencoder(tvol=TVOL, alpha=ALPHA, batch_size=BATCH_SIZE, lambd=LAMBDA)
+        d = DataIteratorStae(P_TRAIN, P_TEST, P_LABELS, batch_size=BATCH_SIZE, tvol=TVOL, taug=TAUG)
     elif METHOD == 'CONVAE2D':
         net = ConvAE2d(tvol=TVOL, alpha=ALPHA, batch_size=BATCH_SIZE, lambd=LAMBDA)
+        d = DataIterator(P_TRAIN, P_TEST, P_LABELS, batch_size=BATCH_SIZE, tvol=TVOL, taug=TAUG)
     elif METHOD == 'EXP':
         net = Experiment(tvol=TVOL, alpha=ALPHA, batch_size=BATCH_SIZE, lambd=LAMBDA)
+        d = DataIterator(P_TRAIN, P_TEST, P_LABELS, batch_size=BATCH_SIZE, tvol=TVOL, taug=TAUG)
     else:
         raise ValueError('Incorrect method specification')
 
