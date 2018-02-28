@@ -20,15 +20,15 @@ class Experiment(object):
         self.batch_size = batch_size
         w_init = tf.contrib.layers.xavier_initializer_conv2d()
         self.params = {
-            "c_w1": tf.get_variable("c_weight1", shape=[11, 11, NCHANNELS, CONV1], initializer=w_init),
+            "c_w1": tf.get_variable("c_weight1", shape=[11, 11, self.tvol * NCHANNELS, CONV1], initializer=w_init),
             "c_b1": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV1]), name="c_bias1"),
             "c_w2": tf.get_variable("c_weight2", shape=[5, 5, CONV1, CONV2], initializer=w_init),
             "c_b2": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV2]), name="c_bias2"),
             "c_w3": tf.get_variable("c_weight3", shape=[3, 3, CONV2, CONV3], initializer=w_init),
             "c_b3": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV3]), name="c_bias3"),
-            "c_w_1": tf.get_variable("c_weight_1", shape=[3, 3, CONV3, self.tvol * NCHANNELS, CONV3],
+            "c_w_1": tf.get_variable("c_weight_1", shape=[3, 3, CONV3, self.tvol * NCHANNELS],
                                      initializer=w_init),
-            "c_b_1": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[self.tvol * NCHANNELS, CONV3]),
+            "c_b_1": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[self.tvol * NCHANNELS]),
                                  name="c_bias_1")
         }
 
@@ -98,8 +98,6 @@ class Experiment(object):
         :param x: tensor of input image of shape (batch_size, HEIGHT, WIDTH, self.tvol * NCHANNELS)
         :return: convolved representation of shape (batch_size, h, w, CONV3)
         """
-        _, _, h, w, c = x.get_shape().as_list()
-        x = tf.reshape(x, shape=[-1, h, w, c])
         conv1 = self.conv2d(x, self.params['c_w1'], self.params['c_b1'], activation=tf.nn.relu, strides=4,
                             phase=self.phase)
         conv2 = self.conv2d(conv1, self.params['c_w2'], self.params['c_b2'], activation=tf.nn.relu, strides=2,
@@ -114,8 +112,6 @@ class Experiment(object):
         :param x: tensor of some transformed representation of input of shape (batch_size, h, w, CONV3)
         :return: deconvolved representation of shape (batch_size, HEIGHT, WEIGHT, self.tvol * NCHANNELS)
         """
-        _, _, h, w, c = x.get_shape().as_list()
-        x = tf.reshape(x, shape=[-1, h, w, c])
         deconv1 = self.deconv2d(x, self.params['c_w_1'], self.params['c_b_1'], [HEIGHT, WIDTH], activation=tf.nn.relu,
                                 strides=1, phase=self.phase, last=True)
         return deconv1
