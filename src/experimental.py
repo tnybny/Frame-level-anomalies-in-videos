@@ -7,8 +7,6 @@ NCHANNELS = 1
 CONV1 = 64
 CONV2 = 32
 CONV3 = 32
-CLSTM1 = 8
-DECONV1 = 1
 WIDTH = 227
 HEIGHT = 227
 
@@ -16,7 +14,7 @@ HEIGHT = 227
 class Experiment(object):
     def __init__(self, tvol, alpha, batch_size, lambd):
         self.tvol = tvol
-        self.x_ = tf.placeholder(tf.float32, [None, self.tvol, HEIGHT, WIDTH, NCHANNELS])
+        self.x_ = tf.placeholder(tf.float32, [None, HEIGHT, WIDTH, self.tvol * NCHANNELS])
         self.phase = tf.placeholder(tf.bool, name='is_training')
 
         self.batch_size = batch_size
@@ -24,20 +22,20 @@ class Experiment(object):
         self.params = {
             "c_w1": tf.get_variable("c_weight1", shape=[11, 11, NCHANNELS, CONV1], initializer=w_init),
             "c_b1": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV1]), name="c_bias1"),
-            "c_w2": tf.get_variable("c_weight2", shape=[3, 3, CONV1, CONV2], initializer=w_init),
+            "c_w2": tf.get_variable("c_weight2", shape=[5, 5, CONV1, CONV2], initializer=w_init),
             "c_b2": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV2]), name="c_bias2"),
             "c_w3": tf.get_variable("c_weight3", shape=[3, 3, CONV2, CONV3], initializer=w_init),
             "c_b3": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV3]), name="c_bias3"),
-            "c_w_1": tf.get_variable("c_weight_1", shape=[3, 3, CLSTM1, DECONV1], initializer=w_init),
-            "c_b_1": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[DECONV1]), name="c_bias_1")
+            "c_w_1": tf.get_variable("c_weight_1", shape=[3, 3, CONV3, self.tvol * NCHANNELS, CONV3],
+                                     initializer=w_init),
+            "c_b_1": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[self.tvol * NCHANNELS, CONV3]),
+                                 name="c_bias_1")
         }
 
-        self.conved = self.spatial_encoder(self.x_)
-        self.convLSTMed = self.temporal_encoder_decoder(self.conved)
-        self.y = self.spatial_decoder(self.convLSTMed)
-        self.y = tf.reshape(self.y, shape=[-1, self.tvol, HEIGHT, WIDTH, NCHANNELS])
+        self.conved = self.spatial_encoder(self.x_,)
+        self.y = self.spatial_decoder(self.conved)
 
-        self.per_frame_recon_errors = tf.reduce_sum(tf.square(self.x_ - self.y), axis=[2, 3, 4])
+        self.per_frame_recon_errors = tf.reduce_sum(tf.square(self.x_ - self.y), axis=[1, 2])
 
         self.reconstruction_loss = 0.5 * tf.reduce_mean(self.per_frame_recon_errors)
         self.vars = tf.trainable_variables()
@@ -66,8 +64,10 @@ class Experiment(object):
         """
         x = tf.nn.conv2d(x, w, strides=[1, strides, strides, 1], padding='VALID')
         x = tf.nn.bias_add(x, b)
-        x = tf.contrib.layers.batch_norm(x, center=True, scale=True, is_training=phase)
-        return activation(x)
+        x = activation(x)
+        x = tf.contrib.layers.batch_norm(x, decay=0.99, center=True, scale=True, is_training=phase,
+                                         updates_collections=None)
+        return x
 
     @staticmethod
     def deconv2d(x, w, b, out_shape, activation=tf.nn.relu, strides=1, phase=True, last=False):
@@ -86,53 +86,33 @@ class Experiment(object):
         x = tf.image.resize_images(x, out_shape, method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
         x = tf.nn.conv2d(x, w, strides=[1, strides, strides, 1], padding='SAME')
         x = tf.nn.bias_add(x, b)
-        if last:
-            return x
-        else:
-            x = tf.contrib.layers.batch_norm(x, center=True, scale=True, is_training=phase)
-            return activation(x)
+        if not last:
+            x = activation(x)
+            x = tf.contrib.layers.batch_norm(x, decay=0.99, center=True, scale=True, is_training=phase,
+                                             updates_collections=None)
+        return x
 
     def spatial_encoder(self, x):
         """
-        Build a spatial encoder that performs convolutions
-        :param x: tensor of input image of shape (batch_size, self.tvol, HEIGHT, WIDTH, NCHANNELS)
-        :return: convolved representation of shape (batch_size * self.tvol, h, w, c)
+        Build a spatial encoder that performs convolutions and poolings
+        :param x: tensor of input image of shape (batch_size, HEIGHT, WIDTH, self.tvol * NCHANNELS)
+        :return: convolved representation of shape (batch_size, h, w, CONV3)
         """
         _, _, h, w, c = x.get_shape().as_list()
         x = tf.reshape(x, shape=[-1, h, w, c])
-        conv1 = self.conv2d(x, self.params['c_w1'], self.params['c_b1'], activation=tf.nn.tanh, strides=4,
+        conv1 = self.conv2d(x, self.params['c_w1'], self.params['c_b1'], activation=tf.nn.relu, strides=4,
                             phase=self.phase)
-        pool1 = tf.nn.max_pool(conv1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='VALID')
-        conv2 = self.conv2d(pool1, self.params['c_w2'], self.params['c_b2'], activation=tf.nn.tanh, strides=1,
+        conv2 = self.conv2d(conv1, self.params['c_w2'], self.params['c_b2'], activation=tf.nn.relu, strides=2,
                             phase=self.phase)
-        pool2 = tf.nn.max_pool(conv2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='VALID')
-        conv3 = self.conv2d(pool2, self.params['c_w3'], self.params['c_b3'], activation=tf.nn.tanh, strides=1,
+        conv3 = self.conv2d(conv2, self.params['c_w3'], self.params['c_b3'], activation=tf.nn.relu, strides=1,
                             phase=self.phase)
         return conv3
 
-    def temporal_encoder_decoder(self, x):
-        """
-        Build a temporal encoder-decoder network that uses convLSTM layers to perform sequential operation
-        :param x: convolved representation of input volume of shape (batch_size * self.tvol, h, w, c)
-        :return: convLSTMed representation (batch_size, self.tvol, h, w, c)
-        """
-        _, h, w, c = x.get_shape().as_list()
-        x = tf.reshape(x, shape=[-1, self.tvol, h, w, c])
-        x = tf.unstack(x, axis=1)
-        num_filters = [CLSTM1]
-        filter_sizes = [[3, 3] for _ in xrange(len(num_filters))]
-        cell = tf.nn.rnn_cell.MultiRNNCell(
-            [ConvLSTMCell(shape=[h, w], num_filters=num_filters[i], filter_size=filter_sizes[i], layer_id=i)
-             for i in xrange(len(num_filters))])
-        states_series, _ = tf.nn.static_rnn(cell, x, dtype=tf.float32)
-        output = tf.transpose(tf.stack(states_series, axis=0), [1, 0, 2, 3, 4])
-        return output
-
     def spatial_decoder(self, x):
         """
-        Build a spatial decoder that performs a single linear resize convolution
-        :param x: tensor of some transformed representation of input of shape (batch_size, self.tvol, h, w, c)
-        :return: deconvolved representation of shape (batch_size * self.tvol, HEIGHT, WEIGHT, NCHANNELS)
+        Build a spatial decoder that performs deconvolutions and unpoolings
+        :param x: tensor of some transformed representation of input of shape (batch_size, h, w, CONV3)
+        :return: deconvolved representation of shape (batch_size, HEIGHT, WEIGHT, self.tvol * NCHANNELS)
         """
         _, _, h, w, c = x.get_shape().as_list()
         x = tf.reshape(x, shape=[-1, h, w, c])
