@@ -22,7 +22,7 @@ Perform anomaly detection in videos using neural network architectures such as 2
     * (empty): space for saved model using TensorFlow's saver methods.
 4. results/
     * (empty): space for log files, plots and data structures that could be useful for post processing.
-5. src
+5. src/
     * conv_AE_2D.py: implements a 2D convolutional auto-encoder.
     * conv_lstm_cell.py: implements a convLSTM cell to be used in an RNN. Credit: [4].
     * create_dataset.py: creates train.npy and test.npy from UCSD Ped1 raw data by some preprocessing.
@@ -32,7 +32,8 @@ Perform anomaly detection in videos using neural network architectures such as 2
     * spatial_temporal_autoencoder.py: implements a spatial-temporal auto-encoder which is an RNN that uses convLSTM cells in between conv and deconv of a convAE.
     * train.py: implements functions to run the network in training and testing modes by interacting with the data iterator and a model.
     * utils.py: implements helper functions. Credit: [5].
-6. main.py: read the config file, start logging, initalize data iterator and model builder and perform training.
+    * experimental.py: just stay away from this, playing around with models.
+6. main.py: read the config file, start logging, initialize data iterator and model builder and perform training.
 
 ## Authors
 1. Bharathkumar "Tiny" Ramachandra: tnybny at gmail dot com
