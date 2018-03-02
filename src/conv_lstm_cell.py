@@ -30,12 +30,27 @@ class ConvLSTMCell(tf.nn.rnn_cell.RNNCell):
         m = 4 * self.num_filters if self.num_filters > 1 else 4
         W = tf.get_variable("l_weight_" + str(self.layer_id), self.filter_size + [n, m])
         y = tf.nn.convolution(x, W, padding="SAME")
-        y += tf.get_variable("l_bias_" + str(self.layer_id), [m], initializer=tf.zeros_initializer())
         j, i, f, o = tf.split(y, 4, axis=self.feature_axis)
+
+        # peephole
+        i += tf.get_variable('W_ci', c.shape[1:]) * c
+        f += tf.get_variable('W_cf', c.shape[1:]) * c
+
+        # normalize
+        j = tf.contrib.layers.layer_norm(j)
+        i = tf.contrib.layers.layer_norm(i)
+        f = tf.contrib.layers.layer_norm(f)
 
         f = tf.sigmoid(f)
         i = tf.sigmoid(i)
         c = c * f + i * tf.nn.tanh(j)
+
+        # peephole
+        o += tf.get_variable('W_co', c.shape[1:]) * c
+
+        # normalize
+        o = tf.contrib.layers.layer_norm(o)
+        c = tf.contrib.layers.layer_norm(c)
 
         o = tf.sigmoid(o)
         h = o * tf.nn.tanh(c)
