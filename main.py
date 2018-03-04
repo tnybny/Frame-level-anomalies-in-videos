@@ -8,7 +8,6 @@ import logging
 import os
 import time
 import datetime
-import numpy as np
 from src.train import train
 
 
@@ -19,13 +18,13 @@ if __name__ == "__main__":
     NUM_ITER = int(Config.get("Default", "NUM_ITER"))
     ALPHA = float(Config.get("Default", "ALPHA"))
     LAMBDA = float(Config.get("Default", "LAMBDA"))
+    GAMMA = float(Config.get("Default", "GAMMA"))
     BATCH_SIZE = int(Config.get("Default", "BATCH_SIZE"))
     TVOL = int(Config.get("Default", "TVOL"))
     TAUG = bool(int(Config.get("Default", "TAUG")))
     P_TRAIN = Config.get("Default", "P_TRAIN")
     P_TEST = Config.get("Default", "P_TEST")
     P_LABELS = Config.get("Default", "P_LABELS")
-    P_CLIP_PARAMS = Config.get("Default", "P_CLIP_PARAMS")
     METHOD = Config.get("Default", "METHOD")
 
     ts = time.time()
@@ -43,7 +42,7 @@ if __name__ == "__main__":
         net = ConvAE2d(tvol=TVOL, alpha=ALPHA, batch_size=BATCH_SIZE, lambd=LAMBDA)
         d = DataIterator(P_TRAIN, P_TEST, P_LABELS, batch_size=BATCH_SIZE, tvol=TVOL, taug=TAUG)
     elif METHOD == 'EXP':
-        net = Experiment(tvol=TVOL, alpha=ALPHA, batch_size=BATCH_SIZE, lambd=LAMBDA)
+        net = Experiment(tvol=TVOL, alpha=ALPHA, batch_size=BATCH_SIZE, lambd=LAMBDA, gamma=GAMMA)
         d = DataIterator(P_TRAIN, P_TEST, P_LABELS, batch_size=BATCH_SIZE, tvol=TVOL, taug=TAUG)
     else:
         raise ValueError('Incorrect method specification')
