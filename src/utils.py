@@ -1,4 +1,5 @@
 import tensorflow as tf
+from tensorflow.python.util import nest
 
 
 def compute_eer(far, frr):
@@ -13,16 +14,27 @@ def compute_eer(far, frr):
     return eer
 
 
-def structural_dissimilarity(images0, images1, data_range=None, k1=0.01, k2=0.03, kernel_size=11,
+def _with_flat_batch(flat_batch_fn):
+    def fn(x, *args, **kwargs):
+        shape = tf.shape(x)
+        flat_batch_x = tf.reshape(x, tf.concat([[-1], shape[-3:]], axis=0))
+        flat_batch_r = flat_batch_fn(flat_batch_x, *args, **kwargs)
+        r = nest.map_structure(lambda x: tf.reshape(x, tf.concat([shape[:-3], x.shape[1:]], axis=0)),
+                               flat_batch_r)
+        return r
+    return fn
+
+
+def structural_dissimilarity(X, Y, data_range=None, K1=0.01, K2=0.03, win_size=11,
                              use_sample_covariance=True):
     """
     Compute structural dissimilarity between images.
-    :param images0: A 4-D tensor of shape `[batch, height, width, channels]`.
-    :param images1: A 4-D tensor of shape `[batch, height, width, channels]`.
+    :param X: A 4-D tensor of shape `[batch, height, width, channels]`.
+    :param Y: A 4-D tensor of shape `[batch, height, width, channels]`.
     :param data_range: float. The data range of the input image (distance between minimum and maximum possible values).
-    :param k1: float, algorithm parameter. See [1].
-    :param k2: float, algorithm parameter. See [1].
-    :param kernel_size: The side-length of the sliding window used in comparison.  Must be an odd value.
+    :param K1: float, algorithm parameter. See [1].
+    :param K2: float, algorithm parameter. See [1].
+    :param win_size: The side-length of the sliding window used in comparison.  Must be an odd value.
     :param use_sample_covariance: bool.
     :return: The DSSIM between two image batches of shape `[batch, channels]`
     References
@@ -35,52 +47,54 @@ def structural_dissimilarity(images0, images1, data_range=None, k1=0.01, k2=0.03
        https://ece.uwaterloo.ca/~z70wang/publications/ssim.pdf,
        DOI:10.1109/TIP.2003.819861
     """
-    images0 = tf.convert_to_tensor(images0)
-    images1 = tf.convert_to_tensor(images1)
+    X = tf.convert_to_tensor(X)
+    Y = tf.convert_to_tensor(Y)
 
-    if images0.shape.ndims != 4 or images1.shape.ndims != 4:
+    ndim = 2  # number of spatial dimensions
+    nch = tf.shape(X)[-1]
+
+    filter_func = _with_flat_batch(tf.nn.depthwise_conv2d)
+    kernel = tf.cast(tf.fill([win_size, win_size, nch, 1], 1 / win_size ** 2), X.dtype)
+    filter_args = {'filter': kernel, 'strides': [1] * 4, 'padding': 'VALID'}
+
+    if X.shape.ndims != 4 or Y.shape.shape.ndims != 4:
         raise ValueError("The images must be a 4-D tensor.")
 
     if data_range is None:
-        data_range = tf.reduce_max([tf.reduce_max(images0) - tf.reduce_min(images0),
-                                    tf.reduce_max(images1) - tf.reduce_min(images1)])
+        data_range = tf.reduce_max([tf.reduce_max(X) - tf.reduce_min(X),
+                                    tf.reduce_max(Y) - tf.reduce_min(Y)])
 
-    c1 = (k1 * data_range) ** 2
-    c2 = (k2 * data_range) ** 2
-    # compute patches independently per channel as in the reference implementation
-    patches0 = []
-    patches1 = []
-    # use no padding (i.e. valid padding) so we don't compute values near the borders
-    kwargs = dict(ksizes=[1] + [kernel_size] * 2 + [1],
-                  strides=[1] * 4, rates=[1] * 4, padding="VALID")
-    for image0_single_channel, image1_single_channel in zip(tf.unstack(images0, axis=-1),
-                                                            tf.unstack(images1, axis=-1)):
-        patches0_single_channel = \
-            tf.extract_image_patches(tf.expand_dims(image0_single_channel, -1), **kwargs)
-        patches1_single_channel = \
-            tf.extract_image_patches(tf.expand_dims(image1_single_channel, -1), **kwargs)
-        patches0.append(patches0_single_channel)
-        patches1.append(patches1_single_channel)
-    patches0 = tf.stack(patches0, axis=-2)
-    patches1 = tf.stack(patches1, axis=-2)
+    NP = win_size ** ndim
 
-    mean0, var0 = tf.nn.moments(patches0, axes=[-1])
-    mean1, var1 = tf.nn.moments(patches1, axes=[-1])
-    cov01 = tf.reduce_mean(patches0 * patches1, axis=-1) - mean0 * mean1
-
+    # filter has already normalized by NP
     if use_sample_covariance:
-        NP = kernel_size ** 2  # 2 spatial dimensions
         cov_norm = NP / (NP - 1)  # sample covariance
     else:
-        cov_norm = 1.0  # population covariance to match [1]
+        cov_norm = 1.0  # population covariance to match Wang et. al. 2004
 
-    var0 *= cov_norm
-    var1 *= cov_norm
-    cov01 *= cov_norm
+    # compute means
+    ux = filter_func(X, **filter_args)
+    uy = filter_func(Y, **filter_args)
 
-    ssim = (2 * mean0 * mean1 + c1) * (2 * cov01 + c2)
-    denom = (tf.square(mean0) + tf.square(mean1) + c1) * (var0 + var1 + c2)
-    ssim /= denom
-    ssim = tf.reduce_mean(ssim, axis=(1, 2))
-    dssim = (1 - ssim) / 2
+    # compute variances and covariances
+    uxx = filter_func(X * X, **filter_args)
+    uyy = filter_func(Y * Y, **filter_args)
+    uxy = filter_func(X * Y, **filter_args)
+    vx = cov_norm * (uxx - ux * ux)
+    vy = cov_norm * (uyy - uy * uy)
+    vxy = cov_norm * (uxy - ux * uy)
+
+    R = data_range
+    C1 = (K1 * R) ** 2
+    C2 = (K2 * R) ** 2
+
+    A1, A2, B1, B2 = ((2 * ux * uy + C1,
+                       2 * vxy + C2,
+                       ux ** 2 + uy ** 2 + C1,
+                       vx + vy + C2))
+    D = B1 * B2
+    S = (A1 * A2) / D
+
+    dssim = (1 - S) / 2
+    dssim = tf.reduce_sum(dssim, axis=(-2, -3))
     return dssim
