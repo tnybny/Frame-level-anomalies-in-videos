@@ -1,3 +1,4 @@
+from __future__ import division
 import tensorflow as tf
 from tensorflow.python.util import nest
 
@@ -57,7 +58,7 @@ def structural_dissimilarity(X, Y, data_range=None, K1=0.01, K2=0.03, win_size=1
     kernel = tf.cast(tf.fill([win_size, win_size, nch, 1], 1 / win_size ** 2), X.dtype)
     filter_args = {'filter': kernel, 'strides': [1] * 4, 'padding': 'VALID'}
 
-    if X.shape.ndims != 4 or Y.shape.shape.ndims != 4:
+    if X.shape.ndims != 4 or Y.shape.ndims != 4:
         raise ValueError("The images must be a 4-D tensor.")
 
     if data_range is None:
