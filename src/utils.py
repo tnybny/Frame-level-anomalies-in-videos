@@ -62,8 +62,7 @@ def structural_dissimilarity(X, Y, data_range=None, K1=0.01, K2=0.03, win_size=1
         raise ValueError("The images must be a 4-D tensor.")
 
     if data_range is None:
-        data_range = tf.reduce_max([tf.reduce_max(X) - tf.reduce_min(X),
-                                    tf.reduce_max(Y) - tf.reduce_min(Y)])
+        data_range = 2.0
 
     NP = win_size ** ndim
 

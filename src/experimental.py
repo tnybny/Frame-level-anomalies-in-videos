@@ -1,14 +1,13 @@
 import tensorflow as tf
-from conv_lstm_cell import ConvLSTMCell
 import os
 
 # network architecture definition
 NCHANNELS = 1
-CONV1 = 64
-CONV2 = 32
-CONV3 = 32
-DECONV1 = 32
-DECONV2 = 64
+CONV1 = 256
+CONV2 = 128
+CONV3 = 64
+DECONV1 = 128
+DECONV2 = 256
 WIDTH = 227
 HEIGHT = 227
 
