@@ -95,7 +95,7 @@ class Experiment(object):
         :param last: last layer of the network or not
         :return: a deconvolutional layer representation
         """
-        x = tf.image.resize_images(x, out_shape, method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+        x = tf.image.resize_images(x, out_shape, method=tf.image.ResizeMethod.BILINEAR)
         x = tf.nn.conv2d(x, w, strides=[1, strides, strides, 1], padding='SAME')
         x = tf.nn.bias_add(x, b)
         if not last:

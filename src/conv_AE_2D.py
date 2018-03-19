@@ -129,13 +129,13 @@ class ConvAE2d(object):
                                 [self.batch_size, newh, neww, DECONV1],
                                 activation=tf.nn.tanh, strides=1, phase=self.phase)
         _, newh, neww, _ = shapes[-2]
-        unpool1 = tf.image.resize_images(deconv1, [newh, neww], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+        unpool1 = tf.image.resize_images(deconv1, [newh, neww], method=tf.image.ResizeMethod.BILINEAR)
         _, newh, neww, _ = shapes[-3]
         deconv2 = self.deconv2d(unpool1, self.params['c_w_2'], self.params['c_b_2'],
                                 [self.batch_size, newh, neww, DECONV2],
                                 activation=tf.nn.tanh, strides=1, phase=self.phase)
         _, newh, neww, _ = shapes[-4]
-        unpool2 = tf.image.resize_images(deconv2, [newh, neww], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+        unpool2 = tf.image.resize_images(deconv2, [newh, neww], method=tf.image.ResizeMethod.BILINEAR)
         deconv3 = self.deconv2d(unpool2, self.params['c_w_1'], self.params['c_b_1'],
                                 [self.batch_size, HEIGHT, WIDTH, self.tvol * NCHANNELS],
                                 activation=tf.nn.tanh, strides=4, phase=self.phase, last=True)

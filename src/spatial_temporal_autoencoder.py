@@ -56,7 +56,7 @@ class SpatialTemporalAutoencoder(object):
         self.sess.run(tf.global_variables_initializer())
 
     @staticmethod
-    def conv2d(x, w, b, activation=tf.nn.relu, strides=1, phase=True):
+    def conv2d(x, w, b, activation=tf.nn.tanh, strides=1, phase=True):
         """
         Build a convolutional layer
         :param x: input
@@ -69,11 +69,12 @@ class SpatialTemporalAutoencoder(object):
         """
         x = tf.nn.conv2d(x, w, strides=[1, strides, strides, 1], padding='VALID')
         x = tf.nn.bias_add(x, b)
-        x = tf.contrib.layers.batch_norm(x, center=True, scale=True, is_training=phase)
+        x = tf.contrib.layers.batch_norm(x, decay=0.99, center=True, scale=True, is_training=phase,
+                                         updates_collections=None)
         return activation(x)
 
     @staticmethod
-    def deconv2d(x, w, b, out_shape, activation=tf.nn.relu, strides=1, phase=True, last=False):
+    def deconv2d(x, w, b, out_shape, activation=tf.nn.tanh, strides=1, phase=True, last=False):
         """
         Build a deconvolutional layer
         :param x: input
@@ -91,7 +92,8 @@ class SpatialTemporalAutoencoder(object):
         if last:
             return x
         else:
-            x = tf.contrib.layers.batch_norm(x, center=True, scale=True, is_training=phase)
+            x = tf.contrib.layers.batch_norm(x, decay=0.99, center=True, scale=True, is_training=phase,
+                                             updates_collections=None)
             return activation(x)
 
     def spatial_encoder(self, x, shapes):
@@ -103,12 +105,11 @@ class SpatialTemporalAutoencoder(object):
         """
         _, _, h, w, c = x.get_shape().as_list()
         x = tf.reshape(x, shape=[-1, h, w, c])
-        conv1 = self.conv2d(x, self.params['c_w1'], self.params['c_b1'], activation=tf.nn.relu, strides=4,
+        conv1 = self.conv2d(x, self.params['c_w1'], self.params['c_b1'], activation=tf.nn.tanh, strides=4,
                             phase=self.phase)
         shapes.append(conv1.get_shape().as_list())
-        conv2 = self.conv2d(conv1, self.params['c_w2'], self.params['c_b2'], activation=tf.nn.relu, strides=2,
+        conv2 = self.conv2d(conv1, self.params['c_w2'], self.params['c_b2'], activation=tf.nn.tanh, strides=2,
                             phase=self.phase)
-        shapes.append(conv2.get_shape().as_list())
         return conv2, shapes
 
     def temporal_encoder_decoder(self, x):
@@ -138,14 +139,13 @@ class SpatialTemporalAutoencoder(object):
         """
         _, _, h, w, c = x.get_shape().as_list()
         x = tf.reshape(x, shape=[-1, h, w, c])
-        shapes = shapes[:-1]  # last convolution shape is the input here, discard
         _, newh, neww, _ = shapes[-1]
         deconv1 = self.deconv2d(x, self.params['c_w_2'], self.params['c_b_2'],
                                 [self.batch_size * self.tvol, newh, neww, DECONV1],
-                                activation=tf.nn.relu, strides=2, phase=self.phase)
+                                activation=tf.nn.tanh, strides=2, phase=self.phase)
         deconv2 = self.deconv2d(deconv1, self.params['c_w_1'], self.params['c_b_1'],
                                 [self.batch_size * self.tvol, HEIGHT, WIDTH, DECONV2],
-                                activation=tf.nn.relu, strides=4, phase=self.phase, last=True)
+                                activation=tf.nn.tanh, strides=4, phase=self.phase, last=True)
         return deconv2
 
     def get_loss(self, x, is_training):
