@@ -84,7 +84,7 @@ class Experiment(object):
     @staticmethod
     def deconv2d(x, w, b, out_shape, activation=tf.nn.relu, strides=1, phase=True, last=False):
         """
-        Build a deconvolutional layer composed of NN-resizing + convolution
+        Build a deconvolutional layer composed of bilinear-resizing + convolution
         :param x: input
         :param w: filter
         :param b: bias
