@@ -3,6 +3,8 @@
 src/logs/
 data/
 models/
+data.nosync/
+models.nosync/
 .DS_Store
 .idea/
 results/STAE.log
