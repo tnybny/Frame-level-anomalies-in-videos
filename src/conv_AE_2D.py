@@ -153,6 +153,9 @@ class ConvAE2d(object):
     def step(self, x, is_training):
         self.sess.run(self.optimizer, feed_dict={self.x_: x, self.phase: is_training})
 
+    def get_reconstructions(self, x, is_training):
+        return self.sess.run([self.y, self.per_frame_recon_errors], feed_dict={self.x_: x, self.phase: is_training})
+
     def get_recon_errors(self, x, is_training):
         return self.per_frame_recon_errors.eval(feed_dict={self.x_: x, self.phase: is_training},
                                                 session=self.sess)

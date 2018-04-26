@@ -1,11 +1,14 @@
 import numpy as np
+import pickle
 
 FRAMES_PER_VIDEO = 200
 
 
 class DataIterator(object):
-    def __init__(self, p_train, p_test, p_labels, batch_size, stride=1, tvol=10, taug=False):
+    def __init__(self, p_train, p_test, p_labels, p_pix_mask, batch_size, stride=1, tvol=10, taug=False):
         self.train, self.test, self.labels = np.load(p_train), np.load(p_test), np.load(p_labels)
+        with open(p_pix_mask, 'rb') as f:
+            self.pix_mask = pickle.load(f)
         self._index = 0
         self._tvol = tvol
         self._taug = taug
@@ -22,7 +25,7 @@ class DataIterator(object):
         aug_idx = 1
         batch = np.zeros(shape=(self.batch_size, self.train[0].shape[0], self.train[0].shape[1],
                                 self.train[0].shape[2] * self._tvol))
-        for i in xrange(self.batch_size):
+        for i in range(self.batch_size):
             vid_idx = np.random.randint(0, self.train.shape[0] / FRAMES_PER_VIDEO)
             if self._taug:
                 aug_idx = np.random.randint(1, 4)
@@ -42,7 +45,7 @@ class DataIterator(object):
         batch = np.zeros(shape=(self.batch_size, self.train[0].shape[0], self.train[0].shape[1],
                                 self.train[0].shape[2] * self._tvol))
         frame_indices = np.full(shape=(self.batch_size, self._tvol), fill_value=-1, dtype=np.int)
-        for i in xrange(self.batch_size):
+        for i in range(self.batch_size):
             if not self.check_data_exhausted():
                 if self._index % FRAMES_PER_VIDEO + self._tvol > FRAMES_PER_VIDEO:
                     self._index = (self._index / FRAMES_PER_VIDEO + 1) * FRAMES_PER_VIDEO
@@ -59,6 +62,9 @@ class DataIterator(object):
     def get_test_labels(self):
         return self.labels
 
+    def get_pix_mask(self):
+        return self.pix_mask
+
     def get_train_size(self):
         return self.train.shape[0]
 
@@ -73,8 +79,10 @@ class DataIterator(object):
 
 
 class DataIteratorStae(object):
-    def __init__(self, p_train, p_test, p_labels, batch_size, stride=1, tvol=10, taug=False):
+    def __init__(self, p_train, p_test, p_labels, p_pix_mask, batch_size, stride=1, tvol=10, taug=False):
         self.train, self.test, self.labels = np.load(p_train), np.load(p_test), np.load(p_labels)
+        with open(p_pix_mask, 'rb') as f:
+            self.pix_mask = pickle.load(f)
         self._index = 0
         self._tvol = tvol
         self._taug = taug
@@ -90,7 +98,7 @@ class DataIteratorStae(object):
         """
         aug_idx = 1
         batch = np.zeros(shape=(self.batch_size, self._tvol) + self.train[0].shape)
-        for i in xrange(self.batch_size):
+        for i in range(self.batch_size):
             vid_idx = np.random.randint(0, self.train.shape[0] / FRAMES_PER_VIDEO)
             if self._taug:
                 aug_idx = np.random.randint(1, 4)
@@ -107,7 +115,7 @@ class DataIteratorStae(object):
         """
         batch = np.zeros(shape=(self.batch_size, self._tvol) + self.test[0].shape)
         frame_indices = np.full(shape=(self.batch_size, self._tvol), fill_value=-1, dtype=np.int)
-        for i in xrange(self.batch_size):
+        for i in range(self.batch_size):
             if not self.check_data_exhausted():
                 if self._index % FRAMES_PER_VIDEO + self._tvol > FRAMES_PER_VIDEO:
                     self._index = (self._index / FRAMES_PER_VIDEO + 1) * FRAMES_PER_VIDEO
@@ -120,6 +128,9 @@ class DataIteratorStae(object):
 
     def get_test_labels(self):
         return self.labels
+
+    def get_pix_mask(self):
+        return self.pix_mask
 
     def get_train_size(self):
         return self.train.shape[0]

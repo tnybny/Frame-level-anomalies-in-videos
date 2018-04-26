@@ -3,11 +3,11 @@ import os
 
 # network architecture definition
 NCHANNELS = 1
-CONV1 = 256
-CONV2 = 128
-CONV3 = 64
-DECONV1 = 128
-DECONV2 = 256
+CONV1 = 512
+CONV2 = 256
+CONV3 = 128
+DECONV1 = 256
+DECONV2 = 512
 WIDTH = 227
 HEIGHT = 227
 
@@ -140,6 +140,9 @@ class Experiment(object):
 
     def step(self, x, is_training):
         self.sess.run(self.optimizer, feed_dict={self.x_: x, self.phase: is_training})
+
+    def get_reconstructions(self, x, is_training):
+        return self.sess.run([self.y, self.per_frame_recon_errors], feed_dict={self.x_: x, self.phase: is_training})
 
     def get_recon_errors(self, x, is_training):
         return self.per_frame_recon_errors.eval(feed_dict={self.x_: x, self.phase: is_training},

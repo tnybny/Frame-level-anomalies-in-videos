@@ -44,4 +44,4 @@ for vidid in range(len(labels)):
     for i in labels[vidid]:
         test_labels[vidid * 200 + i] = 1
 
-np.save('../data/labels.npy', test_labels)
+np.save('../data.nosync/labels.npy', test_labels)
