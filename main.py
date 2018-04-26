@@ -25,6 +25,7 @@ if __name__ == "__main__":
     P_TRAIN = Config.get("Default", "P_TRAIN")
     P_TEST = Config.get("Default", "P_TEST")
     P_LABELS = Config.get("Default", "P_LABELS")
+    P_PIXEL_MASK = Config.get("Default", "P_PIXEL_MASK")
     METHOD = Config.get("Default", "METHOD")
 
     ts = time.time()
@@ -37,13 +38,13 @@ if __name__ == "__main__":
 
     if METHOD == 'STAE':
         net = SpatialTemporalAutoencoder(tvol=TVOL, alpha=ALPHA, batch_size=BATCH_SIZE, lambd=LAMBDA)
-        d = DataIteratorStae(P_TRAIN, P_TEST, P_LABELS, batch_size=BATCH_SIZE, tvol=TVOL, taug=TAUG)
+        d = DataIteratorStae(P_TRAIN, P_TEST, P_LABELS, P_PIXEL_MASK, batch_size=BATCH_SIZE, tvol=TVOL, taug=TAUG)
     elif METHOD == 'CONVAE2D':
         net = ConvAE2d(tvol=TVOL, alpha=ALPHA, batch_size=BATCH_SIZE, lambd=LAMBDA)
-        d = DataIterator(P_TRAIN, P_TEST, P_LABELS, batch_size=BATCH_SIZE, tvol=TVOL, taug=TAUG)
+        d = DataIterator(P_TRAIN, P_TEST, P_LABELS, P_PIXEL_MASK, batch_size=BATCH_SIZE, tvol=TVOL, taug=TAUG)
     elif METHOD == 'EXP':
         net = Experiment(tvol=TVOL, alpha=ALPHA, batch_size=BATCH_SIZE, lambd=LAMBDA)
-        d = DataIterator(P_TRAIN, P_TEST, P_LABELS, batch_size=BATCH_SIZE, tvol=TVOL, taug=TAUG)
+        d = DataIterator(P_TRAIN, P_TEST, P_LABELS, P_PIXEL_MASK, batch_size=BATCH_SIZE, tvol=TVOL, taug=TAUG)
     else:
         raise ValueError('Incorrect method specification')
 
