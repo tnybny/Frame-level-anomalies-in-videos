@@ -64,8 +64,8 @@ def test(data, model):
     pix_truth, pix_pred = [], []
     for key in pix_mask.keys():
         pix_truth.append(np.ravel(pix_mask[key]))
-        pix_pred.append(np.ravel(pix_mask[key]))
-    pix_truth, pix_pred = np.concatenate(pix_truth, axis=0), np.concatenate(pix_pred, axis=0)
+        pix_pred.append(np.ravel(reconstructions[key]))
+    pix_truth, pix_pred = np.concatenate(pix_truth, axis=0) / 255, np.concatenate(pix_pred, axis=0)
 
     # frame-level AUC/EER
     # min-max normalize to linearly scale into [0, 1] per video
