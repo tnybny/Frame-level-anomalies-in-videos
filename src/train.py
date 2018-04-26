@@ -47,7 +47,7 @@ def train(data, model, num_iteration, result_path, model_path, print_every=100):
 def test(data, model):
     data.reset_index()
     per_frame_error = [[] for _ in range(data.get_test_size())]
-    reconstructions = defaultdict(list)
+    reconstructions = defaultdict(lambda: defaultdict(list))
     pix_mask = data.get_pix_mask()
     while not data.check_data_exhausted():
         test_batch, frame_indices = data.get_test_batch()
@@ -57,14 +57,19 @@ def test(data, model):
                 if frame_indices[i, j] != -1:
                     per_frame_error[frame_indices[i, j]].append(frame_error[i, j])
                     vid_id = frame_indices[i, j] / 200
-                    reconstructions[vid_id].append(reconstruction)
+                    if vid_id in pix_mask.keys():
+                        reconstructions[vid_id][frame_indices[i, j] % 200].append(reconstruction[i, :, :, j])
     per_frame_average_error = np.asarray(map(lambda x: np.mean(x), per_frame_error))
-    for key in reconstructions.keys():
-        reconstructions[key] = map(lambda x: np.mean(x), reconstructions[key])
+    recon = defaultdict(list)
+    for vid_id in sorted(reconstructions.keys()):
+        for frame_id in sorted(reconstructions[vid_id].keys()):
+            recon[vid_id].append(np.mean(reconstructions[vid_id][frame_id], axis=0))
+        recon[vid_id] = np.stack(recon[vid_id], axis=-1)
+
     pix_truth, pix_pred = [], []
     for key in pix_mask.keys():
         pix_truth.append(np.ravel(pix_mask[key]))
-        pix_pred.append(np.ravel(reconstructions[key]))
+        pix_pred.append(np.ravel(recon[key]))
     pix_truth, pix_pred = np.concatenate(pix_truth, axis=0) / 255, np.concatenate(pix_pred, axis=0)
 
     # frame-level AUC/EER

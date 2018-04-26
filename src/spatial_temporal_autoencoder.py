@@ -155,7 +155,8 @@ class SpatialTemporalAutoencoder(object):
         self.sess.run(self.optimizer, feed_dict={self.x_: x, self.phase: is_training})
 
     def get_reconstructions(self, x, is_training):
-        return self.sess.run([self.y, self.per_frame_recon_errors], feed_dict={self.x_: x, self.phase: is_training})
+        r, e = self.sess.run([self.y, self.per_frame_recon_errors], feed_dict={self.x_: x, self.phase: is_training})
+        return tf.transpose(tf.squeeze(r), [0, 2, 3, 1]), e
 
     def get_recon_errors(self, x, is_training):
         return self.per_frame_recon_errors.eval(feed_dict={self.x_: x, self.phase: is_training},
