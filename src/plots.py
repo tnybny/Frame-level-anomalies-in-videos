@@ -21,7 +21,7 @@ def plot_loss(losses, valid_losses, path):
     plt.close()
 
 
-def plot_auc(aucs, path):
+def plot_auc(aucs, path, level):
     """
     plot area under the curve vs. (iteration number / auc_every)
     """
@@ -29,7 +29,7 @@ def plot_auc(aucs, path):
     plt.plot(range(1, len(aucs) + 1), aucs)
     plt.xlabel("Training progress (# iter / constant)")
     plt.ylabel("Area under the roc curve")
-    plt.savefig(os.path.join(path, "AUC.png"))
+    plt.savefig(os.path.join(path, level + "_AUC.png"))
     plt.close()
 
 

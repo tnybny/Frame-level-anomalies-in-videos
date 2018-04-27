@@ -10,8 +10,8 @@ from sklearn.metrics import roc_auc_score, roc_curve
 
 def train(data, model, num_iteration, result_path, model_path, print_every=100):
     logging.info("Start training the network: {}".format(time.asctime(time.localtime(time.time()))))
-    aucs, eers, losses, valid_losses = [], [], [], []
-    best_auc, best_eer = 0, 0
+    frame_aucs, frame_eers, pixel_aucs, pixel_eers, losses, valid_losses = [], [], [], [], [], []
+    best_auc = 0
     for i in range(num_iteration + 1):
         tr_batch = data.get_train_batch()
         loss = model.batch_train(tr_batch)
@@ -23,8 +23,8 @@ def train(data, model, num_iteration, result_path, model_path, print_every=100):
             logging.info("frame level area under the roc curve at iteration {0:d}: {1:g}".format(i, frame_auc))
             logging.info("pixel level area under the roc curve at iteration {0:d}: {1:g}".format(i, pixel_auc))
             logging.info("un-regularized validation loss at iteration {0:d}: {1:g}".format(i, valid_loss))
-            aucs.append(frame_auc)
-            eers.append(frame_eer)
+            frame_aucs.append(frame_auc), frame_eers.append(frame_eer)
+            pixel_aucs.append(pixel_auc), pixel_eers.append(pixel_eer)
             valid_losses.append(valid_loss)
             if best_auc < frame_auc:
                 best_auc = frame_auc
@@ -32,10 +32,11 @@ def train(data, model, num_iteration, result_path, model_path, print_every=100):
     # store End of Training model and results
     os.makedirs(os.path.join(model_path, "EoT"))
     model.save_model(os.path.join(model_path, "EoT"))
-    np.save(os.path.join(result_path, "aucs.npy"), aucs)
-    np.save(os.path.join(result_path, "losses.npy"), losses)
+    np.save(os.path.join(result_path, "frame_aucs.npy"), frame_aucs)
+    np.save(os.path.join(result_path, "pixel_aucs.npy"), pixel_aucs)
     plot_loss(losses=losses, valid_losses=valid_losses, path=result_path)
-    plot_auc(aucs=aucs, path=result_path)
+    plot_auc(aucs=frame_aucs, path=result_path, level='Frame')
+    plot_auc(aucs=pixel_aucs, path=result_path, level='Pixel')
     # store best AUC model and results
     model.restore_model(model_path)
     per_frame_errors, frame_auc, frame_eer, pixel_auc, pixel_eer, valid_loss = test(data, model)

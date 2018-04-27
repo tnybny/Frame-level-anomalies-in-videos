@@ -1,10 +1,13 @@
 import numpy as np
 import pickle
+import abc
 
 FRAMES_PER_VIDEO = 200
 
 
 class DataIterator(object):
+    __metaclass__ = abc.ABCMeta
+
     def __init__(self, p_train, p_test, p_labels, p_pix_mask, batch_size, stride=1, tvol=10, taug=False):
         self.train, self.test, self.labels = np.load(p_train), np.load(p_test), np.load(p_labels)
         with open(p_pix_mask, 'rb') as f:
@@ -17,11 +20,47 @@ class DataIterator(object):
         self._stride = stride
         self.batch_size = batch_size
 
+    @abc.abstractmethod
     def get_train_batch(self):
         """
         create volumes of videos with temporal augmentation at random
         :return: self.batch_size volumes of videos
         """
+        pass
+
+    @abc.abstractmethod
+    def get_test_batch(self):
+        """
+        create sequential volumes of videos of batch_size and for each volume, skipping volume creation by self._stride
+        until test set is exhausted
+        :return: self.batch_size volumes of videos and index for every frame in these volumes
+        """
+        pass
+
+    def get_test_labels(self):
+        return self.labels
+
+    def get_pix_mask(self):
+        return self.pix_mask
+
+    def get_train_size(self):
+        return self.train.shape[0]
+
+    def get_test_size(self):
+        return self.test.shape[0]
+
+    def check_data_exhausted(self):
+        return self._index + self._tvol > self.test.shape[0]
+
+    def reset_index(self):
+        self._index = 0
+
+
+class DataIteratorNormal(DataIterator):
+    def __init__(self, p_train, p_test, p_labels, p_pix_mask, batch_size, stride=1, tvol=10, taug=False):
+        super(DataIteratorNormal, self).__init__(p_train, p_test, p_labels, p_pix_mask, batch_size, stride, tvol, taug)
+
+    def get_train_batch(self):
         aug_idx = 1
         batch = np.zeros(shape=(self.batch_size, self.train[0].shape[0], self.train[0].shape[1],
                                 self.train[0].shape[2] * self._tvol))
@@ -37,11 +76,6 @@ class DataIterator(object):
         return batch
 
     def get_test_batch(self):
-        """
-        create sequential volumes of videos of batch_size and for each volume, skipping volume creation by self._stride
-        until test set is exhausted
-        :return: self.batch_size volumes of videos and index for every frame in these volumes
-        """
         batch = np.zeros(shape=(self.batch_size, self.train[0].shape[0], self.train[0].shape[1],
                                 self.train[0].shape[2] * self._tvol))
         frame_indices = np.full(shape=(self.batch_size, self._tvol), fill_value=-1, dtype=np.int)
@@ -59,43 +93,12 @@ class DataIterator(object):
                 break
         return batch, frame_indices
 
-    def get_test_labels(self):
-        return self.labels
 
-    def get_pix_mask(self):
-        return self.pix_mask
-
-    def get_train_size(self):
-        return self.train.shape[0]
-
-    def get_test_size(self):
-        return self.test.shape[0]
-
-    def check_data_exhausted(self):
-        return self._index + self._tvol > self.test.shape[0]
-
-    def reset_index(self):
-        self._index = 0
-
-
-class DataIteratorStae(object):
+class DataIteratorStae(DataIterator):
     def __init__(self, p_train, p_test, p_labels, p_pix_mask, batch_size, stride=1, tvol=10, taug=False):
-        self.train, self.test, self.labels = np.load(p_train), np.load(p_test), np.load(p_labels)
-        with open(p_pix_mask, 'rb') as f:
-            self.pix_mask = pickle.load(f)
-        self._index = 0
-        self._tvol = tvol
-        self._taug = taug
-        if stride > tvol:
-            raise ValueError('The stride can not be greater than temporal volume!')
-        self._stride = stride
-        self.batch_size = batch_size
+        super(DataIteratorStae, self).__init__(p_train, p_test, p_labels, p_pix_mask, batch_size, stride, tvol, taug)
 
     def get_train_batch(self):
-        """
-        create volumes of videos with temporal augmentation at random
-        :return: self.batch_size volumes of videos
-        """
         aug_idx = 1
         batch = np.zeros(shape=(self.batch_size, self._tvol) + self.train[0].shape)
         for i in range(self.batch_size):
@@ -108,11 +111,6 @@ class DataIteratorStae(object):
         return batch
 
     def get_test_batch(self):
-        """
-        create sequential volumes of videos of batch_size and for each volume, skipping volume creation by self._stride
-        until test set is exhausted
-        :return: self.batch_size volumes of videos and index for every frame in these volumes
-        """
         batch = np.zeros(shape=(self.batch_size, self._tvol) + self.test[0].shape)
         frame_indices = np.full(shape=(self.batch_size, self._tvol), fill_value=-1, dtype=np.int)
         for i in range(self.batch_size):
@@ -125,21 +123,3 @@ class DataIteratorStae(object):
             else:
                 break
         return batch, frame_indices
-
-    def get_test_labels(self):
-        return self.labels
-
-    def get_pix_mask(self):
-        return self.pix_mask
-
-    def get_train_size(self):
-        return self.train.shape[0]
-
-    def get_test_size(self):
-        return self.test.shape[0]
-
-    def check_data_exhausted(self):
-        return self._index + self._tvol > self.test.shape[0]
-
-    def reset_index(self):
-        self._index = 0

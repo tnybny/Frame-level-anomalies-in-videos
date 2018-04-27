@@ -1,6 +1,6 @@
 from __future__ import print_function, division
 from src.spatial_temporal_autoencoder import SpatialTemporalAutoencoder
-from src.data_iterator import DataIterator, DataIteratorStae
+from src.data_iterator import DataIteratorNormal, DataIteratorStae
 from src.conv_AE_2D import ConvAE2d
 from src.experiment import Experiment
 import ConfigParser
@@ -41,14 +41,16 @@ if __name__ == "__main__":
         d = DataIteratorStae(P_TRAIN, P_TEST, P_LABELS, P_PIXEL_MASK, batch_size=BATCH_SIZE, tvol=TVOL, taug=TAUG)
     elif METHOD == 'CONVAE2D':
         net = ConvAE2d(tvol=TVOL, alpha=ALPHA, batch_size=BATCH_SIZE, lambd=LAMBDA)
-        d = DataIterator(P_TRAIN, P_TEST, P_LABELS, P_PIXEL_MASK, batch_size=BATCH_SIZE, tvol=TVOL, taug=TAUG)
+        d = DataIteratorNormal(P_TRAIN, P_TEST, P_LABELS, P_PIXEL_MASK, batch_size=BATCH_SIZE, tvol=TVOL, taug=TAUG)
     elif METHOD == 'EXP':
         net = Experiment(tvol=TVOL, alpha=ALPHA, batch_size=BATCH_SIZE, lambd=LAMBDA)
-        d = DataIterator(P_TRAIN, P_TEST, P_LABELS, P_PIXEL_MASK, batch_size=BATCH_SIZE, tvol=TVOL, taug=TAUG)
+        d = DataIteratorNormal(P_TRAIN, P_TEST, P_LABELS, P_PIXEL_MASK, batch_size=BATCH_SIZE, tvol=TVOL, taug=TAUG)
     else:
         raise ValueError('Incorrect method specification')
 
-    area_under_roc, equal_error_rate = train(data=d, model=net, num_iteration=NUM_ITER, result_path=result_path,
-                                             model_path=model_path)
-    logging.info("Best area under the roc curve: {0:g}".format(area_under_roc))
-    logging.info("Equal error rate corresponding to best auc: {0:g}".format(equal_error_rate))
+    frame_auc, frame_eer, pixel_auc, pixel_eer = train(data=d, model=net, num_iteration=NUM_ITER,
+                                                       result_path=result_path, model_path=model_path)
+    logging.info("Best frame-level area under the roc curve: {0:g}".format(frame_auc))
+    logging.info("Frame-level equal error rate corresponding to this: {0:g}".format(frame_eer))
+    logging.info("Pixel-level area under the roc curve corresponding to this: {0:g}".format(pixel_auc))
+    logging.info("Pixel-level equal error rate corresponding to this: {0:g}".format(pixel_eer))
