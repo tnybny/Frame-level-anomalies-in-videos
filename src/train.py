@@ -8,7 +8,7 @@ from src.utils import compute_eer
 from sklearn.metrics import roc_auc_score, roc_curve
 
 
-def train(data, model, num_iteration, result_path, model_path, print_every=100):
+def train(data, model, num_iteration, result_path, model_path, print_every=200):
     logging.info("Start training the network: {}".format(time.asctime(time.localtime(time.time()))))
     frame_aucs, frame_eers, pixel_aucs, pixel_eers, losses, valid_losses = [], [], [], [], [], []
     best_auc = 0
@@ -48,7 +48,7 @@ def train(data, model, num_iteration, result_path, model_path, print_every=100):
 def test(data, model):
     data.reset_index()
     per_frame_error = [[] for _ in range(data.get_test_size())]
-    reconstructions = defaultdict(lambda: defaultdict(list))
+    re = defaultdict(lambda: defaultdict(list))
     pix_mask = data.get_pix_mask()
     while not data.check_data_exhausted():
         test_batch, frame_indices = data.get_test_batch()
@@ -57,20 +57,21 @@ def test(data, model):
             for j in range(frame_indices.shape[1]):
                 if frame_indices[i, j] != -1:
                     per_frame_error[frame_indices[i, j]].append(frame_error[i, j])
-                    vid_id = frame_indices[i, j] / 200
+                    vid_id = frame_indices[i, j] // 200 + 1  # pix_mask keys have 1-indexing
                     if vid_id in pix_mask.keys():
-                        reconstructions[vid_id][frame_indices[i, j] % 200].append(reconstruction[i, :, :, j])
+                        per_pix_err = np.square(reconstruction[i, :, :, j] - test_batch[i, :, :, j])
+                        re[vid_id][frame_indices[i, j] % 200].append(per_pix_err)
     per_frame_average_error = np.asarray(map(lambda x: np.mean(x), per_frame_error))
-    recon = defaultdict(list)
-    for vid_id in sorted(reconstructions.keys()):
-        for frame_id in sorted(reconstructions[vid_id].keys()):
-            recon[vid_id].append(np.mean(reconstructions[vid_id][frame_id], axis=0))
-        recon[vid_id] = np.stack(recon[vid_id], axis=-1)
+    recon_err = defaultdict(list)
+    for vid_id in sorted(re.keys()):
+        for frame_id in sorted(re[vid_id].keys()):
+            recon_err[vid_id].append(np.mean(re[vid_id][frame_id], axis=0))
+        recon_err[vid_id] = np.stack(recon_err[vid_id], axis=0)
 
     pix_truth, pix_pred = [], []
     for key in pix_mask.keys():
-        pix_truth.append(np.ravel(pix_mask[key]))
-        pix_pred.append(np.ravel(recon[key]))
+        pix_truth.append(np.ravel(np.array(pix_mask[key])))
+        pix_pred.append(np.ravel(np.array(recon_err[key])))
     pix_truth, pix_pred = np.concatenate(pix_truth, axis=0) / 255, np.concatenate(pix_pred, axis=0)
 
     # frame-level AUC/EER
