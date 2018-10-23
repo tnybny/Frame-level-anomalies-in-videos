@@ -12,6 +12,7 @@ results/STAE.log
 results/archive
 results/*.npy
 results/*
+src/evaluation/compute_*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
