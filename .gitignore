@@ -1,3 +1,4 @@
+*.icloud
 *.out
 *.log
 src/logs/
