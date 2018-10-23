@@ -1,6 +1,10 @@
 from __future__ import division
 import tensorflow as tf
 from tensorflow.python.util import nest
+from glob import glob
+import numpy as np
+from PIL import Image
+import os
 
 
 def compute_eer(far, frr):
@@ -25,3 +29,20 @@ def _with_flat_batch(flat_batch_fn):
         return r
     return fn
 
+
+def get_mean_frame(dirs, ext):
+    num_frames_in_dir = [0] * len(dirs)
+    for i in range(len(dirs)):
+        num_frames_in_dir[i] = len(glob(os.path.join(dirs[i], '*.' + ext)))
+    tot_frames = 5000
+    which_dirs = np.random.choice(np.arange(len(dirs)), size=tot_frames, replace=True)
+    for i in range(which_dirs.shape[0]):
+        f_idx = np.random.randint(0, num_frames_in_dir[which_dirs[i]])
+        fnames = sorted(glob(os.path.join(dirs[which_dirs[i]], '*.' + ext)))
+        im = np.array(Image.open(fnames[f_idx]), dtype='float64') / 255.
+        if im.ndim == 2:
+            im = np.expand_dims(im, axis=2)
+        if i == 0:
+            frames = np.zeros((tot_frames,) + im.shape)
+        frames[i] = im
+    return np.mean(frames, axis=0)

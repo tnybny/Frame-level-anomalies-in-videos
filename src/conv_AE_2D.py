@@ -15,12 +15,11 @@ HEIGHT = 227
 
 
 class ConvAE2d(object):
-    def __init__(self, tvol, alpha, batch_size, lambd):
+    def __init__(self, tvol, alpha, lambd):
         self.tvol = tvol
         self.x_ = tf.placeholder(tf.float32, [None, HEIGHT, WIDTH, self.tvol * NCHANNELS])
         self.phase = tf.placeholder(tf.bool, name='is_training')
 
-        self.batch_size = batch_size
         w_init = tf.contrib.layers.xavier_initializer_conv2d()
         self.params = {
             "c_w1": tf.get_variable("c_weight1", shape=[15, 15, NCHANNELS * self.tvol, CONV1], initializer=w_init),
@@ -131,19 +130,20 @@ class ConvAE2d(object):
         :return: deconvolved representation of shape (batch_size, HEIGHT, WEIGHT, self.tvol * NCHANNELS)
         """
         _, newh, neww, _ = shapes[-1]
+        batch_size = tf.shape(x)[0]
         deconv1 = self.deconv2d(x, self.params['c_w_3'], self.params['c_b_3'],
-                                [self.batch_size, newh, neww, DECONV1],
+                                [batch_size, newh, neww, DECONV1],
                                 activation=tf.nn.tanh, strides=1, pad='VALID', phase=self.phase)
         mask = masks[-1]
         unpool1 = unpool(deconv1, mask=mask)
         _, newh, neww, _ = shapes[-3]
         deconv2 = self.deconv2d(unpool1, self.params['c_w_2'], self.params['c_b_2'],
-                                [self.batch_size, newh, neww, DECONV2],
+                                [batch_size, newh, neww, DECONV2],
                                 activation=tf.nn.tanh, strides=1, pad='VALID', phase=self.phase)
         mask = masks[-2]
         unpool2 = unpool(deconv2, mask=mask)
         deconv3 = self.deconv2d(unpool2, self.params['c_w_1'], self.params['c_b_1'],
-                                [self.batch_size, HEIGHT, WIDTH, self.tvol * NCHANNELS],
+                                [batch_size, HEIGHT, WIDTH, self.tvol * NCHANNELS],
                                 activation=tf.nn.tanh, strides=4, pad='VALID', phase=self.phase, last=True)
         return deconv3
 

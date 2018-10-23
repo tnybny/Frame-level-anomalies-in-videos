@@ -13,12 +13,11 @@ HEIGHT = 227
 
 
 class Experiment(object):
-    def __init__(self, tvol, alpha, batch_size, lambd=0.0):
+    def __init__(self, tvol, alpha, lambd=0.0):
         self.tvol = tvol
         self.x_ = tf.placeholder(tf.float32, [None, HEIGHT, WIDTH, self.tvol * NCHANNELS])
         self.phase = tf.placeholder(tf.bool, name='is_training')
 
-        self.batch_size = batch_size
         w_init = tf.contrib.layers.xavier_initializer_conv2d()
         self.params = {
             "c_w1": tf.get_variable("c_weight1", shape=[11, 11, self.tvol * NCHANNELS, CONV1], initializer=w_init),
@@ -93,7 +92,7 @@ class Experiment(object):
         :param last: last layer of the network or not
         :return: a deconvolutional layer representation
         """
-        x = tf.image.resize_images(x, out_shape, method=tf.image.ResizeMethod.BILINEAR)
+        x = tf.image.resize_images(x, out_shape, method=tf.image.ResizeMethod.BILINEAR, align_corners=True)
         x = tf.nn.conv2d(x, w, strides=[1, strides, strides, 1], padding='SAME')
         x = tf.nn.bias_add(x, b)
         if not last:

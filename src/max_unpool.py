@@ -17,12 +17,13 @@ def max_pool_with_argmax(x, stride=2):
 def unpool(input, mask, stride=2):
     assert mask is not None
     ksize = [1, stride, stride, 1]
-    input_shape = input.get_shape().as_list()
+    input_shape = tf.shape(input, out_type=tf.int64)
     #  calculation new shape
     output_shape = (input_shape[0], input_shape[1] * ksize[1], input_shape[2] * ksize[2], input_shape[3])
     # calculation indices for batch, height, width and feature maps
-    one_like_mask = tf.ones_like(mask)
-    batch_range = tf.reshape(tf.range(output_shape[0], dtype=tf.int64), shape=[input_shape[0], 1, 1, 1])
+    one_like_mask = tf.ones_like(mask, dtype=tf.int64)
+    batch_range = tf.reshape(tf.range(output_shape[0], dtype=tf.int64),
+                             shape=tf.cast([input_shape[0], 1, 1, 1], tf.int64))
     b = one_like_mask * batch_range
     y = mask // (output_shape[2] * output_shape[3])
     x = mask % (output_shape[2] * output_shape[3]) // output_shape[3]

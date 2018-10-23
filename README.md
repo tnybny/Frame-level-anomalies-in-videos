@@ -16,17 +16,17 @@ Perform anomaly detection in videos using neural network architectures such as 2
 ## List of files and their functions
 1. config/
     * config.ini: contains settings for the run such as which network to use, learning rate, batch size and etcetera.
-2. data/
-    * (empty): space for labels.npy, train.npy and test.npy created using src/create_dataset.py and src/create_labels.py.
-3. models/
+2. data.nosync/
+    * (empty): space for train.tfrecords, test.tfrecords, frame-level annotation files created using src/create_tfrecords.py and src/create_<dataset>_frame_annotation.py.py.
+3. models.nosync/
     * (empty): space for saved model using TensorFlow's saver methods.
 4. results/
     * (empty): space for log files, plots and data structures that could be useful for post processing.
 5. src/
+    * create_ped1_frame_annotation.py: creates frame annotation to guide frame-level AUC calculation which is used to guide training.
     * conv_AE_2D.py: implements a 2D convolutional auto-encoder.
     * conv_lstm_cell.py: implements a convLSTM cell to be used in an RNN. Credit: [4].
-    * create_dataset.py: creates train.npy and test.npy from UCSD Ped1 raw data by some preprocessing.
-    * create_labels.py: creates the labels for test data of UCSD Ped1 dataset.
+    * create_tfrecords.py: creates train.npy and test.npy from UCSD Ped1 raw data by some preprocessing.
     * data_iterator.py: feeds batches of video clips for training and testing.
     * plots.py: implements plotting functions for results from a run.
     * spatial_temporal_autoencoder.py: implements a spatial-temporal auto-encoder which is an RNN that uses convLSTM cells in between conv and deconv of a convAE.

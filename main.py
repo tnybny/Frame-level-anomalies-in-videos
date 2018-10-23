@@ -1,6 +1,6 @@
 from __future__ import print_function, division
 from src.spatial_temporal_autoencoder import SpatialTemporalAutoencoder
-from src.data_iterator import DataIteratorNormal, DataIteratorStae
+from src.data_iterator_new import DataIteratorNormal, DataIteratorStae
 from src.conv_AE_2D import ConvAE2d
 from src.experiment import Experiment
 import ConfigParser
@@ -21,11 +21,9 @@ if __name__ == "__main__":
     GAMMA = float(Config.get("Default", "GAMMA"))
     BATCH_SIZE = int(Config.get("Default", "BATCH_SIZE"))
     TVOL = int(Config.get("Default", "TVOL"))
-    TAUG = bool(int(Config.get("Default", "TAUG")))
-    P_TRAIN = Config.get("Default", "P_TRAIN")
-    P_TEST = Config.get("Default", "P_TEST")
-    P_LABELS = Config.get("Default", "P_LABELS")
-    P_PIXEL_MASK = Config.get("Default", "P_PIXEL_MASK")
+    DATA_DIR = Config.get("Default", "DATA_DIR")
+    EXT = Config.get("Default", "EXT")
+    FRAME_GT_PATH = Config.get("Default", "FRAME_GT_PATH")
     METHOD = Config.get("Default", "METHOD")
 
     ts = time.time()
@@ -37,20 +35,18 @@ if __name__ == "__main__":
     os.makedirs(model_path)
 
     if METHOD == 'STAE':
-        net = SpatialTemporalAutoencoder(tvol=TVOL, alpha=ALPHA, batch_size=BATCH_SIZE, lambd=LAMBDA)
-        d = DataIteratorStae(P_TRAIN, P_TEST, P_LABELS, P_PIXEL_MASK, batch_size=BATCH_SIZE, tvol=TVOL, taug=TAUG)
+        net = SpatialTemporalAutoencoder(tvol=TVOL, alpha=ALPHA, lambd=LAMBDA)
+        d = DataIteratorStae(data_dir=DATA_DIR, ext=EXT, batch_size=BATCH_SIZE, tvol=TVOL)
     elif METHOD == 'CONVAE2D':
-        net = ConvAE2d(tvol=TVOL, alpha=ALPHA, batch_size=BATCH_SIZE, lambd=LAMBDA)
-        d = DataIteratorNormal(P_TRAIN, P_TEST, P_LABELS, P_PIXEL_MASK, batch_size=BATCH_SIZE, tvol=TVOL, taug=TAUG)
+        net = ConvAE2d(tvol=TVOL, alpha=ALPHA, lambd=LAMBDA)
+        d = DataIteratorNormal(data_dir=DATA_DIR, ext=EXT, batch_size=BATCH_SIZE, tvol=TVOL)
     elif METHOD == 'EXP':
-        net = Experiment(tvol=TVOL, alpha=ALPHA, batch_size=BATCH_SIZE, lambd=LAMBDA)
-        d = DataIteratorNormal(P_TRAIN, P_TEST, P_LABELS, P_PIXEL_MASK, batch_size=BATCH_SIZE, tvol=TVOL, taug=TAUG)
+        net = Experiment(tvol=TVOL, alpha=ALPHA, lambd=LAMBDA)
+        d = DataIteratorNormal(data_dir=DATA_DIR, ext=EXT, batch_size=BATCH_SIZE, tvol=TVOL)
     else:
         raise ValueError('Incorrect method specification')
 
-    frame_auc, frame_eer, pixel_auc, pixel_eer = train(data=d, model=net, num_iteration=NUM_ITER,
-                                                       result_path=result_path, model_path=model_path)
+    frame_auc, frame_eer = train(data=d, model=net, num_iteration=NUM_ITER, data_dir=DATA_DIR, ext=EXT,
+                                 frame_gt_path=FRAME_GT_PATH, result_path=result_path, model_path=model_path)
     logging.info("Best frame-level area under the roc curve: {0:g}".format(frame_auc))
     logging.info("Frame-level equal error rate corresponding to this: {0:g}".format(frame_eer))
-    logging.info("Pixel-level area under the roc curve corresponding to this: {0:g}".format(pixel_auc))
-    logging.info("Pixel-level equal error rate corresponding to this: {0:g}".format(pixel_eer))

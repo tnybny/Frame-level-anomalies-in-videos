@@ -39,9 +39,8 @@ labels.append(range(0, 121))
 labels.append(range(85, 200))
 labels.append(range(14, 108))
 
-test_labels = np.array([0] * 36 * 200)
-for vidid in range(len(labels)):
-    for i in labels[vidid]:
-        test_labels[vidid * 200 + i] = 1
+for i in range(len(labels)):
+    labels[i] = np.array(labels[i])
+labels = np.array(labels)
 
-np.save('../data.nosync/labels.npy', test_labels)
+np.save('../data.nosync/anomalous_frames_ucsdped1.npy', labels)
