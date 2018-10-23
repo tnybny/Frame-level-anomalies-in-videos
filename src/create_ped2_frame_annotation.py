@@ -1,7 +1,3 @@
-# CONFIDENTIAL (C) Mitsubishi Electric Research Labs (MERL) 2018
-# Mike Jones, Bharathkumar Ramachandra
-# 5/14/2018
-
 import numpy as np
 
 # ground truth of which frames are anomalous by manual image inspection, only test videos have anomalous frames
@@ -23,4 +19,4 @@ for i in range(len(labels)):
     labels[i] = np.array(labels[i])
 labels = np.array(labels)
 
-np.save('../../data/anomalous_frames_ucsdped2.npy', labels)
+np.save('../data.nosync/anomalous_frames_ucsdped2.npy', labels)
