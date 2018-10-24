@@ -11,8 +11,8 @@ import tensorflow as tf
 Config = ConfigParser.ConfigParser()
 config_path = os.path.join("config", "config.ini")
 Config.read(config_path)
-data_dir = 'data.nosync/StreetScene'
-ext = 'jpg'
+data_dir = Config.get("Default", "DATA_DIR")
+ext = Config.get("Default", "EXT")
 
 train_dir = os.path.join(data_dir, "Train")
 test_dir = os.path.join(data_dir, "Test")
