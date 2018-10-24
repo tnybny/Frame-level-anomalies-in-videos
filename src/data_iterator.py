@@ -11,12 +11,14 @@ class DataIterator(object):
     def __init__(self, data_dir, ext, batch_size, tvol=10):
         self._tvol = tvol
         self.batch_size = batch_size
+        self._ext = ext
         train_dir = os.path.join(data_dir, 'Train')
         train_dirs = sorted(
             [os.path.join(train_dir, d) for d in os.listdir(train_dir) if re.match(r'Train[0-9][0-9][0-9]$', d)])
         assert len(train_dirs) >= 1
 
         self.mean_frame = get_mean_frame(train_dirs, ext)
+        self.height, self.width, self.nchannels = self.mean_frame.shape
 
         self.train_filename = os.path.join('data.nosync', 'train.tfrecords')
         self.test_filename = os.path.join('data.nosync', 'test.tfrecords')
@@ -50,7 +52,7 @@ class DataIterator(object):
 class DataIteratorNormal(DataIterator):
     def __init__(self, data_dir, ext, batch_size, tvol=10):
         super(DataIteratorNormal, self).__init__(data_dir, ext, batch_size, tvol=tvol)
-        self.tr_buffer = tf.data.TFRecordDataset([self.train_filename]).map(self._extract_fn).shuffle(300).repeat() \
+        self.tr_buffer = tf.data.TFRecordDataset([self.train_filename]).map(self._extract_fn).shuffle(32).repeat() \
             .batch(batch_size).map(self._resize_clips).prefetch(1)
         self.te_buffer = tf.data.TFRecordDataset([self.test_filename]).map(self._extract_fn).batch(batch_size)\
             .map(self._resize_clips).prefetch(1)
@@ -77,19 +79,21 @@ class DataIteratorNormal(DataIterator):
 
     def _extract_fn(self, tfrecord):
         # Extract features using the keys set during creation
-        feature = {'vid_clip': tf.FixedLenFeature([], tf.string),
-                   'nchannels': tf.FixedLenFeature([], tf.int64),
-                   'height': tf.FixedLenFeature([], tf.int64),
-                   'width': tf.FixedLenFeature([], tf.int64)}
+        feature = {}
+        if self._ext == 'tif':
+            feature['vid_clip'] = tf.FixedLenFeature([], tf.string)
+        else:  # bmp, gif, jpg, png
+            for j in range(self._tvol):
+                feature['vid_clip_' + str(j).zfill(2)] = tf.FixedLenFeature([], tf.string)
         # Extract the data record
         sample = tf.parse_single_example(tfrecord, feature)
-        clip = tf.decode_raw(sample['vid_clip'], tf.uint8)
-        self.nchannels = sample['nchannels']
-        self.height = sample['height']
-        self.width = sample['width']
-        clip = tf.cast(tf.reshape(clip, tf.cast([self._tvol, self.height, self.width, self.nchannels], tf.int64)),
-                       tf.float64)
-        clip = tf.reshape(tf.transpose(clip / tf.constant(255., tf.float64) - self.mean_frame, [1, 2, 0, 3]),
+        if self._ext == 'tif':
+            clip = tf.decode_raw(sample['vid_clip'], tf.uint8)
+            clip = tf.cast(tf.reshape(clip, [self._tvol, self.height, self.width, self.nchannels]), tf.float32)
+        else:
+            clip = tf.cast(tf.stack([tf.image.decode_image(sample['vid_clip_' + str(j).zfill(2)])
+                                     for j in range(self._tvol)], axis=0), tf.float32)
+        clip = tf.reshape(tf.transpose(clip / tf.constant(255., tf.float32) - self.mean_frame, [1, 2, 0, 3]),
                           [tf.shape(clip)[1], tf.shape(clip)[2], tf.shape(clip)[3] * tf.shape(clip)[0]])
         return clip
 
@@ -102,7 +106,7 @@ class DataIteratorNormal(DataIterator):
 class DataIteratorStae(DataIterator):
     def __init__(self, data_dir, ext, batch_size, tvol=10):
         super(DataIteratorStae, self).__init__(data_dir, ext, batch_size, tvol=tvol)
-        self.tr_buffer = tf.data.TFRecordDataset([self.train_filename]).map(self._extract_fn).shuffle(300).repeat() \
+        self.tr_buffer = tf.data.TFRecordDataset([self.train_filename]).map(self._extract_fn).shuffle(32).repeat() \
             .batch(batch_size).map(self._resize_clips).prefetch(1)
         self.te_buffer = tf.data.TFRecordDataset([self.test_filename]).map(self._extract_fn).batch(batch_size) \
             .map(self._resize_clips).prefetch(1)
@@ -129,19 +133,21 @@ class DataIteratorStae(DataIterator):
 
     def _extract_fn(self, tfrecord):
         # Extract features using the keys set during creation
-        feature = {'vid_clip': tf.FixedLenFeature([], tf.string),
-                   'nchannels': tf.FixedLenFeature([], tf.int64),
-                   'height': tf.FixedLenFeature([], tf.int64),
-                   'width': tf.FixedLenFeature([], tf.int64)}
+        feature = {}
+        if self._ext == 'tif':
+            feature['vid_clip'] = tf.FixedLenFeature([], tf.string)
+        else:  # bmp, gif, jpg, png
+            for j in range(self._tvol):
+                feature['vid_clip_' + str(j).zfill(2)] = tf.FixedLenFeature([], tf.string)
         # Extract the data record
         sample = tf.parse_single_example(tfrecord, feature)
-        clip = tf.decode_raw(sample['vid_clip'], tf.uint8)
-        self.nchannels = sample['nchannels']
-        self.height = sample['height']
-        self.width = sample['width']
-        clip = tf.cast(tf.reshape(clip, tf.cast([self._tvol, self.height, self.width, self.nchannels], tf.int64)),
-                       tf.float64)
-        clip = clip / tf.constant(255., tf.float64) - self.mean_frame
+        if self._ext == 'tif':
+            clip = tf.decode_raw(sample['vid_clip'], tf.uint8)
+            clip = tf.cast(tf.reshape(clip, [self._tvol, self.height, self.width, self.nchannels]), tf.float32)
+        else:
+            clip = tf.cast(tf.stack([tf.image.decode_image(sample['vid_clip_' + str(j).zfill(2)])
+                                     for j in range(self._tvol)], axis=0), tf.float32)
+        clip = clip / tf.constant(255., tf.float32) - self.mean_frame
         return clip
 
     @staticmethod

@@ -34,7 +34,7 @@ def get_mean_frame(dirs, ext):
     num_frames_in_dir = [0] * len(dirs)
     for i in range(len(dirs)):
         num_frames_in_dir[i] = len(glob(os.path.join(dirs[i], '*.' + ext)))
-    tot_frames = 5000
+    tot_frames = 500
     which_dirs = np.random.choice(np.arange(len(dirs)), size=tot_frames, replace=True)
     for i in range(which_dirs.shape[0]):
         f_idx = np.random.randint(0, num_frames_in_dir[which_dirs[i]])

@@ -11,8 +11,8 @@ import tensorflow as tf
 Config = ConfigParser.ConfigParser()
 config_path = os.path.join("config", "config.ini")
 Config.read(config_path)
-data_dir = Config.get("Default", "DATA_DIR")
-ext = Config.get("Default", "EXT")
+data_dir = 'data.nosync/StreetScene'
+ext = 'jpg'
 
 train_dir = os.path.join(data_dir, "Train")
 test_dir = os.path.join(data_dir, "Test")
@@ -34,22 +34,22 @@ for split in ['Train', 'Test']:
         print("Reading images from directory:", dirs[seq_idx])
         fnames = sorted(glob(os.path.join(dirs[seq_idx], '*.' + ext)))
         i = 0
-        im = np.array(Image.open(fnames[0]))
+        feature = {}
         while i <= len(fnames) - TVOL:
             print("frame", i)
-            ims = np.stack([np.array(Image.open(x)) for x in fnames[i:i + TVOL]], axis=0).astype('uint8')
-            if im.ndim == 2:  # add dimension to grayscale image
-                ims = np.expand_dims(ims, axis=3)
+            if ext == 'tif':  # write dense uint8 array
+                ims = np.stack([np.array(Image.open(x)) for x in fnames[i:i + TVOL]], axis=0).astype('uint8')
+                feature['vid_clip'] = tf.train.Feature(bytes_list=
+                                                       tf.train.BytesList(value=[tf.compat.as_bytes(ims.tostring())]))
+            else:  # png, jpg, bmp, gif -- write bytes in native encoding
+                ims = [tf.gfile.FastGFile(x).read() for x in fnames[i:i + TVOL]]
+                for j in range(TVOL):
+                    feature['vid_clip_' + str(j).zfill(2)] = \
+                        tf.train.Feature(bytes_list=tf.train.BytesList(value=[tf.compat.as_bytes(ims[j])]))
             i += 1
-            feature = {'vid_clip': tf.train.Feature(bytes_list=
-                                                    tf.train.BytesList(value=[tf.compat.as_bytes(ims.tostring())])),
-                       'nchannels': tf.train.Feature(int64_list=tf.train.Int64List(value=[ims.shape[3]])),
-                       'height': tf.train.Feature(int64_list=tf.train.Int64List(value=[im.shape[0]])),
-                       'width': tf.train.Feature(int64_list=tf.train.Int64List(value=[im.shape[1]]))}
 
             # Create an example protocol buffer
             example = tf.train.Example(features=tf.train.Features(feature=feature))
-
             # Serialize to string and write on the file
             writer.write(example.SerializeToString())
     writer.close()
