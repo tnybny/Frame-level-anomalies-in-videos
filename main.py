@@ -1,6 +1,6 @@
 from __future__ import print_function, division
 from src.spatial_temporal_autoencoder import SpatialTemporalAutoencoder
-from src.data_iterator_new import DataIteratorNormal, DataIteratorStae
+from src.data_iterator import DataIteratorNormal, DataIteratorStae
 from src.conv_AE_2D import ConvAE2d
 from src.experiment import Experiment
 import ConfigParser
