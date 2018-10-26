@@ -3,7 +3,6 @@ from conv_lstm_cell import ConvLSTMCell
 import os
 
 # network architecture definition
-NCHANNELS = 1
 CONV1 = 128
 CONV2 = 64
 CLSTM1 = 64
@@ -11,19 +10,22 @@ CLSTM2 = 32
 CLSTM3 = 64
 DECONV1 = 128
 DECONV2 = 1
-WIDTH = 227
-HEIGHT = 227
 
 
 class SpatialTemporalAutoencoder(object):
-    def __init__(self, tvol, alpha, lambd):
-        self.tvol = tvol
-        self.x_ = tf.placeholder(tf.float32, [None, self.tvol, HEIGHT, WIDTH, NCHANNELS])
+    def __init__(self, data, alpha, lambd):
+        self.ch = data.nchannels
+        self.tvol = data.tvol
+        self.x_ = data.next_batch
+        self.h, self.w = tf.shape(self.x_)[1], tf.shape(self.x_)[2]
+        self.handle = data.handle
+        self.tr_iter = data.tr_iter
+        self.te_iter = data.te_iter
         self.phase = tf.placeholder(tf.bool, name='is_training')
 
         w_init = tf.contrib.layers.xavier_initializer_conv2d()
         self.params = {
-            "c_w1": tf.get_variable("c_weight1", shape=[11, 11, NCHANNELS, CONV1], initializer=w_init),
+            "c_w1": tf.get_variable("c_weight1", shape=[11, 11, self.ch, CONV1], initializer=w_init),
             "c_b1": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV1]), name="c_bias1"),
             "c_w2": tf.get_variable("c_weight2", shape=[5, 5, CONV1, CONV2], initializer=w_init),
             "c_b2": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV2]), name="c_bias2"),
@@ -37,9 +39,11 @@ class SpatialTemporalAutoencoder(object):
         self.conved, shapes = self.spatial_encoder(self.x_, shapes)
         self.convLSTMed = self.temporal_encoder_decoder(self.conved)
         self.y = self.spatial_decoder(self.convLSTMed, shapes)
-        self.y = tf.reshape(self.y, shape=[-1, self.tvol, HEIGHT, WIDTH, NCHANNELS])
+        self.y = tf.reshape(self.y, shape=[-1, self.tvol, self.h, self.w, self.ch])
 
-        self.per_frame_recon_errors = tf.reduce_sum(tf.square(self.x_ - self.y), axis=[2, 3, 4])
+        self.per_pixel_recon_errors = tf.reshape(
+            tf.transpose(tf.square(self.x_ - self.y), [0, 2, 3, 1, 4]), [-1, self.h, self.w, self.ch * self.tvol])
+        self.per_frame_recon_errors = tf.reduce_sum(self.per_pixel_recon_errors, axis=[1, 2])
 
         self.reconstruction_loss = 0.5 * tf.reduce_mean(self.per_frame_recon_errors)
         self.vars = tf.trainable_variables()
@@ -53,6 +57,9 @@ class SpatialTemporalAutoencoder(object):
 
         self.sess = tf.InteractiveSession()
         self.sess.run(tf.global_variables_initializer())
+        self.sess.run(self.te_iter.initializer)
+        self.training_handle = self.sess.run(data.tr_iter.string_handle())
+        self.testing_handle = self.sess.run(data.te_iter.string_handle())
 
     @staticmethod
     def conv2d(x, w, b, activation=tf.nn.tanh, strides=1, phase=True):
@@ -124,7 +131,7 @@ class SpatialTemporalAutoencoder(object):
         filter_sizes = [[3, 3], [3, 3], [3, 3]]
         cell = tf.nn.rnn_cell.MultiRNNCell(
             [ConvLSTMCell(shape=[h, w], num_filters=num_filters[i], filter_size=filter_sizes[i], layer_id=i)
-             for i in xrange(len(num_filters))])
+             for i in range(len(num_filters))])
         states_series, _ = tf.nn.static_rnn(cell, x, dtype=tf.float32)
         output = tf.transpose(tf.stack(states_series, axis=0), [1, 0, 2, 3, 4])
         return output
@@ -144,23 +151,38 @@ class SpatialTemporalAutoencoder(object):
                                 [batch_size * self.tvol, newh, neww, DECONV1],
                                 activation=tf.nn.tanh, strides=2, phase=self.phase)
         deconv2 = self.deconv2d(deconv1, self.params['c_w_1'], self.params['c_b_1'],
-                                [batch_size * self.tvol, HEIGHT, WIDTH, DECONV2],
+                                [batch_size * self.tvol, self.h, self.w, DECONV2],
                                 activation=tf.nn.tanh, strides=4, phase=self.phase, last=True)
         return deconv2
 
-    def get_loss(self, x, is_training):
-        return self.loss.eval(feed_dict={self.x_: x, self.phase: is_training}, session=self.sess)
+    def get_loss(self):
+        try:
+            return self.loss.eval(feed_dict={self.phase: False, self.handle: self.testing_handle},
+                                  session=self.sess)
+        except tf.errors.OutOfRangeError:
+            self.sess.run(self.te_iter.initializer)
+            return None
 
-    def step(self, x, is_training):
-        self.sess.run(self.optimizer, feed_dict={self.x_: x, self.phase: is_training})
+    def batch_train(self):
+        _, loss = self.sess.run([self.optimizer, self.loss], feed_dict={self.phase: True,
+                                                                        self.handle: self.training_handle})
+        return loss
 
-    def get_reconstructions(self, x, is_training):
-        r, e = self.sess.run([self.y, self.per_frame_recon_errors], feed_dict={self.x_: x, self.phase: is_training})
-        return tf.transpose(tf.squeeze(r), [0, 2, 3, 1]), e
+    def get_reconstructions(self):
+        try:
+            return self.sess.run([self.x_, self.y],
+                                 feed_dict={self.phase: False, self.handle: self.testing_handle})
+        except tf.errors.OutOfRangeError:
+            self.sess.run(self.te_iter.initializer)
+            return None, None
 
-    def get_recon_errors(self, x, is_training):
-        return self.per_frame_recon_errors.eval(feed_dict={self.x_: x, self.phase: is_training},
-                                                session=self.sess)
+    def get_recon_errors(self):
+        try:
+            return self.sess.run([self.per_pixel_recon_errors, self.per_frame_recon_errors],
+                                 feed_dict={self.phase: False, self.handle: self.testing_handle})
+        except tf.errors.OutOfRangeError:
+            self.sess.run(self.te_iter.initializer)
+            return None, None
 
     def save_model(self, path):
         self.saver.save(self.sess, os.path.join(path, "model.ckpt"))
@@ -168,9 +190,9 @@ class SpatialTemporalAutoencoder(object):
     def restore_model(self, path):
         self.saver.restore(self.sess, os.path.join(path, "model.ckpt"))
 
-    def batch_reconstruct(self, x):
-        return self.y.eval(feed_dict={self.x_: x, self.phase: False}, session=self.sess)
-
-    def batch_train(self, xbatch):
-        self.step(xbatch, is_training=True)
-        return self.get_loss(xbatch, is_training=False)
+    def batch_reconstruct(self):
+        try:
+            return self.y.eval(feed_dict={self.phase: False, self.handle: self.testing_handle}, session=self.sess)
+        except tf.errors.OutOfRangeError:
+            self.sess.run(self.te_iter.initializer)
+            return None

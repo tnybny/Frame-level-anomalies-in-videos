@@ -39,7 +39,7 @@ def get_mean_frame(dirs, ext):
     for i in range(which_dirs.shape[0]):
         f_idx = np.random.randint(0, num_frames_in_dir[which_dirs[i]])
         fnames = sorted(glob(os.path.join(dirs[which_dirs[i]], '*.' + ext)))
-        im = np.array(Image.open(fnames[f_idx]), dtype='float64') / 255.
+        im = np.array(Image.open(fnames[f_idx]), dtype='float32') / 255.
         if im.ndim == 2:
             im = np.expand_dims(im, axis=2)
         if i == 0:

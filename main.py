@@ -35,18 +35,18 @@ if __name__ == "__main__":
     os.makedirs(model_path)
 
     if METHOD == 'STAE':
-        net = SpatialTemporalAutoencoder(tvol=TVOL, alpha=ALPHA, lambd=LAMBDA)
         d = DataIteratorStae(data_dir=DATA_DIR, ext=EXT, batch_size=BATCH_SIZE, tvol=TVOL)
+        net = SpatialTemporalAutoencoder(data=d, alpha=ALPHA, lambd=LAMBDA)
     elif METHOD == 'CONVAE2D':
-        net = ConvAE2d(tvol=TVOL, alpha=ALPHA, lambd=LAMBDA)
         d = DataIteratorNormal(data_dir=DATA_DIR, ext=EXT, batch_size=BATCH_SIZE, tvol=TVOL)
+        net = ConvAE2d(data=d, alpha=ALPHA, lambd=LAMBDA)
     elif METHOD == 'EXP':
-        net = Experiment(tvol=TVOL, alpha=ALPHA, lambd=LAMBDA)
         d = DataIteratorNormal(data_dir=DATA_DIR, ext=EXT, batch_size=BATCH_SIZE, tvol=TVOL)
+        net = Experiment(data=d, alpha=ALPHA, lambd=LAMBDA)
     else:
         raise ValueError('Incorrect method specification')
 
-    frame_auc, frame_eer = train(data=d, model=net, num_iteration=NUM_ITER, data_dir=DATA_DIR, ext=EXT,
+    frame_auc, frame_eer = train(model=net, num_iteration=NUM_ITER, data_dir=DATA_DIR, ext=EXT,
                                  frame_gt_path=FRAME_GT_PATH, result_path=result_path, model_path=model_path)
     logging.info("Best frame-level area under the roc curve: {0:g}".format(frame_auc))
     logging.info("Frame-level equal error rate corresponding to this: {0:g}".format(frame_eer))

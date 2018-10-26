@@ -4,25 +4,27 @@ from tensorflow.python.ops import init_ops
 from max_unpool import max_pool_with_argmax, unpool
 
 # network architecture definition
-NCHANNELS = 1
 CONV1 = 512
 CONV2 = 256
 CONV3 = 128
 DECONV1 = 256
 DECONV2 = 512
-WIDTH = 227
-HEIGHT = 227
 
 
 class ConvAE2d(object):
-    def __init__(self, tvol, alpha, lambd):
-        self.tvol = tvol
-        self.x_ = tf.placeholder(tf.float32, [None, HEIGHT, WIDTH, self.tvol * NCHANNELS])
+    def __init__(self, data, alpha, lambd):
+        self.ch = data.nchannels
+        self.tvol = data.tvol
+        self.x_ = data.next_batch
+        self.h, self.w = tf.shape(self.x_)[1], tf.shape(self.x_)[2]
+        self.handle = data.handle
+        self.tr_iter = data.tr_iter
+        self.te_iter = data.te_iter
         self.phase = tf.placeholder(tf.bool, name='is_training')
 
         w_init = tf.contrib.layers.xavier_initializer_conv2d()
         self.params = {
-            "c_w1": tf.get_variable("c_weight1", shape=[15, 15, NCHANNELS * self.tvol, CONV1], initializer=w_init),
+            "c_w1": tf.get_variable("c_weight1", shape=[15, 15, self.ch * self.tvol, CONV1], initializer=w_init),
             "c_b1": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV1]), name="c_bias1"),
             "c_w2": tf.get_variable("c_weight2", shape=[4, 4, CONV1, CONV2], initializer=w_init),
             "c_b2": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV2]), name="c_bias2"),
@@ -32,15 +34,16 @@ class ConvAE2d(object):
             "c_b_3": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[DECONV1]), name="c_bias_3"),
             "c_w_2": tf.get_variable("c_weight_2", shape=[4, 4, DECONV2, DECONV1], initializer=w_init),
             "c_b_2": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[DECONV2]), name="c_bias_2"),
-            "c_w_1": tf.get_variable("c_weight_1", shape=[15, 15, self.tvol * NCHANNELS, DECONV2], initializer=w_init),
-            "c_b_1": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[self.tvol * NCHANNELS]), name="c_bias_1")
+            "c_w_1": tf.get_variable("c_weight_1", shape=[15, 15, self.tvol * self.ch, DECONV2], initializer=w_init),
+            "c_b_1": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[self.tvol * self.ch]), name="c_bias_1")
         }
 
         shapes, masks = [], []
         self.conved, shapes, masks = self.spatial_encoder(self.x_, shapes, masks)
         self.y = self.spatial_decoder(self.conved, shapes, masks)
 
-        self.per_frame_recon_errors = tf.reduce_sum(tf.square(self.x_ - self.y), axis=[1, 2])
+        self.per_pixel_recon_errors = tf.square(self.x_ - self.y)
+        self.per_frame_recon_errors = tf.reduce_sum(self.per_pixel_recon_errors, axis=[1, 2])
 
         self.reconstruction_loss = 0.5 * tf.reduce_mean(self.per_frame_recon_errors)
         self.vars = tf.trainable_variables()
@@ -54,6 +57,9 @@ class ConvAE2d(object):
 
         self.sess = tf.InteractiveSession()
         self.sess.run(tf.global_variables_initializer())
+        self.sess.run(self.te_iter.initializer)
+        self.training_handle = self.sess.run(data.tr_iter.string_handle())
+        self.testing_handle = self.sess.run(data.te_iter.string_handle())
 
     @staticmethod
     def conv2d(x, w, b, activation=tf.nn.tanh, strides=1, pad='VALID', phase=True):
@@ -143,22 +149,38 @@ class ConvAE2d(object):
         mask = masks[-2]
         unpool2 = unpool(deconv2, mask=mask)
         deconv3 = self.deconv2d(unpool2, self.params['c_w_1'], self.params['c_b_1'],
-                                [batch_size, HEIGHT, WIDTH, self.tvol * NCHANNELS],
+                                [batch_size, self.h, self.w, self.tvol * self.ch],
                                 activation=tf.nn.tanh, strides=4, pad='VALID', phase=self.phase, last=True)
         return deconv3
 
-    def get_loss(self, x, is_training):
-        return self.loss.eval(feed_dict={self.x_: x, self.phase: is_training}, session=self.sess)
+    def get_loss(self):
+        try:
+            return self.loss.eval(feed_dict={self.phase: False, self.handle: self.testing_handle},
+                                  session=self.sess)
+        except tf.errors.OutOfRangeError:
+            self.sess.run(self.te_iter.initializer)
+            return None
 
-    def step(self, x, is_training):
-        self.sess.run(self.optimizer, feed_dict={self.x_: x, self.phase: is_training})
+    def batch_train(self):
+        _, loss = self.sess.run([self.optimizer, self.loss], feed_dict={self.phase: True,
+                                                                        self.handle: self.training_handle})
+        return loss
 
-    def get_reconstructions(self, x, is_training):
-        return self.sess.run([self.y, self.per_frame_recon_errors], feed_dict={self.x_: x, self.phase: is_training})
+    def get_reconstructions(self):
+        try:
+            return self.sess.run([self.x_, self.y],
+                                 feed_dict={self.phase: False, self.handle: self.testing_handle})
+        except tf.errors.OutOfRangeError:
+            self.sess.run(self.te_iter.initializer)
+            return None, None
 
-    def get_recon_errors(self, x, is_training):
-        return self.per_frame_recon_errors.eval(feed_dict={self.x_: x, self.phase: is_training},
-                                                session=self.sess)
+    def get_recon_errors(self):
+        try:
+            return self.sess.run([self.per_pixel_recon_errors, self.per_frame_recon_errors],
+                                 feed_dict={self.phase: False, self.handle: self.testing_handle})
+        except tf.errors.OutOfRangeError:
+            self.sess.run(self.te_iter.initializer)
+            return None, None
 
     def save_model(self, path):
         self.saver.save(self.sess, os.path.join(path, "model.ckpt"))
@@ -166,9 +188,9 @@ class ConvAE2d(object):
     def restore_model(self, path):
         self.saver.restore(self.sess, os.path.join(path, "model.ckpt"))
 
-    def batch_reconstruct(self, x):
-        return self.y.eval(feed_dict={self.x_: x, self.phase: False}, session=self.sess)
-
-    def batch_train(self, xbatch):
-        self.step(xbatch, is_training=True)
-        return self.get_loss(xbatch, is_training=False)
+    def batch_reconstruct(self):
+        try:
+            return self.y.eval(feed_dict={self.phase: False, self.handle: self.testing_handle}, session=self.sess)
+        except tf.errors.OutOfRangeError:
+            self.sess.run(self.te_iter.initializer)
+            return None
