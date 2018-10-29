@@ -72,7 +72,7 @@ def test(model, data_dir, ext, frame_gt_path, result_path, last=False):
                 f_idx += 1
             else:
                 seq_idx += 1
-                if len(dirs) < seq_idx:
+                if seq_idx < len(dirs):
                     fnames = sorted(glob(os.path.join(dirs[seq_idx], '*.' + ext)))
                 f_idx = 0
                 assert np.all(0 < inspection_count)
