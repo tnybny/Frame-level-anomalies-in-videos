@@ -17,15 +17,14 @@ for i in range(len(test_dirs)):
     anoms = []
     with open(gt_trackfile) as f:
         for line in f:
-            f_idx = int(line.split(' ')[0].split('.')[0]) - 1
+            f_idx = int(line.split(' ')[0].split('/')[-1].split('.')[0]) - 1
             track_idx = int(line.split(' ')[1])
             if len(anoms) != track_idx + 1:
                 anoms.append([f_idx])
             elif len(anoms) == track_idx + 1:
                 anoms[track_idx].append(f_idx)
-            print(track_idx, f_idx)
     flat_list = [item for sublist in anoms for item in sublist]
-    flat_list = list(set(flat_list))
+    flat_list = sorted(list(set(flat_list)))
     print(flat_list)
     labels.append(flat_list)
 
