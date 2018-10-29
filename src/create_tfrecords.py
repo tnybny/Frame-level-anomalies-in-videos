@@ -30,7 +30,7 @@ for split in ['Train', 'Test']:
     dirs = train_dirs if split is 'Train' else test_dirs
     writer = tf.python_io.TFRecordWriter(train_filename) if split is 'Train' \
         else tf.python_io.TFRecordWriter(test_filename)
-    j = 0
+    k = 0
     for seq_idx in range(len(dirs)):
         print("Reading images from directory:", dirs[seq_idx])
         fnames = sorted(glob(os.path.join(dirs[seq_idx], '*.' + ext)))
@@ -52,7 +52,7 @@ for split in ['Train', 'Test']:
             example = tf.train.Example(features=tf.train.Features(feature=feature))
             # Serialize to string and write on the file
             writer.write(example.SerializeToString())
-            j += 1
-        print("Total of {0:d} records written from {1} sequence".format(i, seq_idx))
-    print("Total of {0:d} records written from {1} split".format(j, split))
+            k += 1
+        print("Total of {0:d} records written from sequence {1}".format(i, seq_idx))
+    print("Total of {0:d} records written from {1} split".format(k, split))
     writer.close()
