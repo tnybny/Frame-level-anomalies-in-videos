@@ -65,7 +65,7 @@ def test(model, data_dir, ext, frame_gt_path, result_path, last=False):
                 inspection_count = np.zeros(len(fnames), dtype='int')
             for j in range(frame_error[i].shape[0] // model.ch):
                 if last:
-                    anom_scores[f_idx + j] += np.sum(pixel_error[i, :, :, j * model.ch:j * model.ch + model.ch], axis=3)
+                    anom_scores[f_idx + j] += np.sum(pixel_error[i, :, :, j * model.ch:j * model.ch + model.ch], axis=2)
                 inspection_count[f_idx + j] += 1
                 per_frame_error[seq_idx][f_idx + j].append(np.sum(frame_error[i, j * model.ch:j * model.ch + model.ch]))
             if f_idx < len(fnames) - model.tvol:
