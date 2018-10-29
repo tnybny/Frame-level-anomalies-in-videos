@@ -30,13 +30,13 @@ for split in ['Train', 'Test']:
     dirs = train_dirs if split is 'Train' else test_dirs
     writer = tf.python_io.TFRecordWriter(train_filename) if split is 'Train' \
         else tf.python_io.TFRecordWriter(test_filename)
+    j = 0
     for seq_idx in range(len(dirs)):
         print("Reading images from directory:", dirs[seq_idx])
         fnames = sorted(glob(os.path.join(dirs[seq_idx], '*.' + ext)))
         i = 0
         feature = {}
         while i <= len(fnames) - TVOL:
-            print("frame", i)
             if ext == 'tif':  # write dense uint8 array
                 ims = np.stack([np.array(Image.open(x)) for x in fnames[i:i + TVOL]], axis=0).astype('uint8')
                 feature['vid_clip'] = tf.train.Feature(bytes_list=
@@ -52,4 +52,7 @@ for split in ['Train', 'Test']:
             example = tf.train.Example(features=tf.train.Features(feature=feature))
             # Serialize to string and write on the file
             writer.write(example.SerializeToString())
+            j += 1
+        print("Total of {0:d} records written from {1} sequence".format(i, seq_idx))
+    print("Total of {0:d} records written from {1} split".format(j, split))
     writer.close()
