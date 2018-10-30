@@ -79,12 +79,13 @@ def test(model, data_dir, ext, frame_gt_path, result_path, last=False):
                 if last:
                     # save anomaly scores
                     anom_scores = np.transpose(np.transpose(anom_scores, [1, 2, 0]) / inspection_count, [2, 0, 1])
-                    anom_scores = np.resize(anom_scores, (anom_scores.shape[0], ) + im.shape)
+                    anom_scores = np.resize(anom_scores, (anom_scores.shape[0], im.shape[0], im.shape[1]))
                     min_as, max_as = min(min_as, np.min(anom_scores)), max(max_as, np.max(anom_scores))
                     np.save(os.path.join(anom_scores_dir, 'anomaly_scores_' + str(seq_idx - 1).zfill(3) +
                                          '_ReconstructionError.npy'), anom_scores)
     test_dir = os.path.join(data_dir, 'Test')
     if frame_gt_path is not None and last:
+        logging.info("anomaly scores range: {0:g} to {1:g}".format(min_as, max_as))
         compute_frame_roc_auc(test_dir=test_dir, ext=ext, frame_gt_path=frame_gt_path,
                               anom_score_range=(min_as, max_as), dist_name='ReconstructionError',
                               result_path=result_path)
