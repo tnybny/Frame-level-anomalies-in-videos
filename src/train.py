@@ -14,7 +14,7 @@ from sklearn.metrics import roc_auc_score, roc_curve
 
 def train(model, num_iteration, data_dir, ext, frame_gt_path, result_path, model_path, print_every=200):
     logging.info("Start training the network: {}".format(time.asctime(time.localtime(time.time()))))
-    frame_aucs, frame_eers, pixel_aucs, pixel_eers, losses, valid_losses = [], [], [], [], [], []
+    frame_aucs, frame_eers, losses, valid_losses = [], [], [], []
     best_auc = 0
     for i in range(num_iteration + 1):
         loss = model.batch_train()
@@ -31,10 +31,8 @@ def train(model, num_iteration, data_dir, ext, frame_gt_path, result_path, model
                 best_auc = frame_auc
                 model.save_model(model_path)
     np.save(os.path.join(result_path, "frame_aucs.npy"), frame_aucs)
-    np.save(os.path.join(result_path, "pixel_aucs.npy"), pixel_aucs)
     plot_loss(losses=losses, valid_losses=valid_losses, path=result_path)
     plot_auc(aucs=frame_aucs, path=result_path, level='Frame')
-    plot_auc(aucs=pixel_aucs, path=result_path, level='Pixel')
     # store best AUC model and results
     model.restore_model(model_path)
     frame_auc, frame_eer, _ = test(model, data_dir, ext, frame_gt_path, result_path, last=True)
@@ -110,7 +108,7 @@ def test(model, data_dir, ext, frame_gt_path, result_path, last=False):
     per_frame_average_error = np.concatenate(per_frame_average_error)
     valid_loss = np.mean(per_frame_average_error[labels == 0])
     if last:
-        plot_pfe(pfe=per_frame_average_error, labels=labels, path=result_path)
+        plot_pfe(pfe=per_frame_average_error, labels=labels, test_dir=test_dir, ext=ext, result_path=result_path)
         np.save(os.path.join(result_path, "per_frame_errors.npy"), per_frame_average_error)
 
     return frame_auc, frame_eer, valid_loss

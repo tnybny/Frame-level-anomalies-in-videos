@@ -1,5 +1,7 @@
 import os
 import numpy as np
+import re
+from glob import glob
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -33,23 +35,25 @@ def plot_auc(aucs, path, level):
     plt.close()
 
 
-def plot_pfe(pfe, labels, path):
+def plot_pfe(pfe, labels, test_dir, ext, result_path):
     """
     plot per frame error vs. frame number and shade anomalous background using ground truth labels
     for each video in the test set
     """
-    num_test_vids = 36
-    frames_per_video = 200
-    for vid_id in range(num_test_vids):
+    test_vids = sorted([os.path.join(test_dir, d) for d in os.listdir(test_dir)
+                        if re.match(r'Test[0-9][0-9][0-9]$', d)])
+    start, end = 0, 0
+    for vid_id in range(len(test_vids)):
         plt.figure()
-        start = vid_id * frames_per_video
-        end = start + 200
+        frames_in_vid = len(glob(os.path.join(test_vids[vid_id], '*.' + ext)))
+        start = end
+        end = start + frames_in_vid
         y_ax = pfe[np.arange(start, end)]
-        plt.plot(np.arange(1, frames_per_video + 1), y_ax, linewidth=0.5)
+        plt.plot(np.arange(1, frames_in_vid + 1), y_ax, linewidth=0.5)
         plt.xlabel("Frame number")
         plt.ylabel("Reconstruction error")
-        for i in xrange(start, end):
+        for i in range(start, end):
             if labels[i] == 1:
                 plt.axvspan(i - start, i + 1 - start, facecolor='salmon', alpha=0.5)
-        plt.savefig(os.path.join(path, "PFE_vid{0:d}.png".format(vid_id + 1)))
+        plt.savefig(os.path.join(result_path, "PFE_vid{0:d}.png".format(vid_id + 1)))
         plt.close()
