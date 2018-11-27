@@ -84,12 +84,12 @@ def test(model, data_dir, ext, frame_gt_path, result_path, last=False):
     test_dir = os.path.join(data_dir, 'Test')
     if frame_gt_path is not None and last:
         logging.info("anomaly scores range: {0:g} to {1:g}".format(min_as, max_as))
-        compute_frame_roc_auc(test_dir=test_dir, ext=ext, frame_gt_path=frame_gt_path,
-                              anom_score_range=(min_as, max_as), dist_name='ReconstructionError',
-                              result_path=result_path)
-        compute_pixel_roc_auc(test_dir=test_dir, ext=ext, frame_gt_path=frame_gt_path,
-                              anom_score_range=(min_as, max_as), dist_name='ReconstructionError',
-                              result_path=result_path)
+        # compute_frame_roc_auc(test_dir=test_dir, ext=ext, frame_gt_path=frame_gt_path,
+        #                       anom_score_range=(min_as, max_as), dist_name='ReconstructionError',
+        #                       result_path=result_path)
+        # compute_pixel_roc_auc(test_dir=test_dir, ext=ext, frame_gt_path=frame_gt_path,
+        #                       anom_score_range=(min_as, max_as), dist_name='ReconstructionError',
+        #                       result_path=result_path)
 
     per_frame_average_error = [np.asarray(map(lambda x: np.mean(x), per_frame_error[i]))
                                for i in range(len(per_frame_error))]
