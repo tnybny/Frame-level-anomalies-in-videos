@@ -36,8 +36,13 @@ Perform anomaly detection in videos using neural network architectures such as 2
     * train.py: implements functions to run the network in training and testing modes by interacting with the data iterator and a model.
 6. main.py: read the config file, start logging, initialize data iterator and model builder and perform training.
 
-* Note: src.evaluation.compute_frame_roc_auc and src.evaluation.compute_pixel_roc_auc cannot be made available due to copyright.
+* Note: src/evaluation/compute_frame_roc_auc and src/evaluation/compute_pixel_roc_auc cannot be made available due to copyright.
 They are not essential to this repo; details on how to implement them can be found in [5].
+
+## Instructions for usage
+1. Run src/create_<dataset_name>_frame_annotation.py.
+2. Set DATA_DIR and EXT in config/config.ini and run src/create_tfrecords.py.
+3. Set all variables in config/config.ini and run main.py.
 
 ## Authors
 1. Bharathkumar "Tiny" Ramachandra: tnybny at gmail dot com
