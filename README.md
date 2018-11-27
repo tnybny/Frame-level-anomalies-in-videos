@@ -34,6 +34,7 @@ Perform anomaly detection in videos using neural network architectures such as 2
     * plots.py: implements plotting functions for results from a run.
     * spatial_temporal_autoencoder.py: implements a spatial-temporal auto-encoder which is an RNN that uses convLSTM cells in between conv and deconv of a convAE.
     * train.py: implements functions to run the network in training and testing modes by interacting with the data iterator and a model.
+    * max_unpool.py: implements the max_unpool operation in the convolutional auto-encoder. Credit: [6].
 6. main.py: read the config file, start logging, initialize data iterator and model builder and perform training.
 
 * Note: src/evaluation/compute_frame_roc_auc and src/evaluation/compute_pixel_roc_auc cannot be made available due to copyright.
@@ -54,3 +55,4 @@ They are not essential to this repo; details on how to implement them can be fou
 3. Chong, Yong Shean, and Yong Haur Tay. "Abnormal event detection in videos using spatiotemporal autoencoder." International Symposium on Neural Networks. Springer, Cham, 2017.
 4. https://github.com/carlthome/tensorflow-convlstm-cell/blob/master/cell.py
 5. Li, Weixin, Vijay Mahadevan, and Nuno Vasconcelos. "Anomaly detection and localization in crowded scenes." IEEE transactions on pattern analysis and machine intelligence 36.1 (2014): 18-32.
+6. https://github.com/Pepslee
