@@ -1,6 +1,6 @@
 # Frame-level anomaly detection in videos
 
-Perform anomaly detection in videos using neural network architectures such as 2D convolutional auto-encoder[2] and spatial-temporal auto-encoder[3]. The focus is on finding frame-level anomalies in the UCSD Ped1 dataset[1].
+Perform anomaly detection in videos using neural network architectures such as 2D convolutional auto-encoder[2] and spatial-temporal auto-encoder[3]. The focus is on finding frame-level anomalies in the UCSD Ped1 dataset[1, 5].
 
 ## Prerequisites
 1. Python 2.7+
@@ -37,7 +37,7 @@ Perform anomaly detection in videos using neural network architectures such as 2
 6. main.py: read the config file, start logging, initialize data iterator and model builder and perform training.
 
 * Note: src/evaluation/compute_frame_roc_auc and src/evaluation/compute_pixel_roc_auc cannot be made available due to copyright.
-They are not essential to this repo; details on how to implement them can be found in [5].
+They are not essential to this repo; details on how to implement them can be found in [1, 5].
 
 ## Instructions for usage
 1. Run src/create_<dataset_name>_frame_annotation.py.
