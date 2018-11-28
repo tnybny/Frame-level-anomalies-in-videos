@@ -108,12 +108,9 @@ class DataIteratorStae(DataIterator):
 
     @staticmethod
     def _resize_clips(clips):
+        t, h, w, c = tf.shape(clips)[1], tf.shape(clips)[2], tf.shape(clips)[3], tf.shape(clips)[4]
         clips = tf.reshape(tf.transpose(clips, [0, 2, 3, 1, 4]),
-                           [tf.shape(clips)[0], tf.shape(clips)[2], tf.shape(clips)[3],
-                            tf.shape(clips)[1] * tf.shape(clips)[4]])
+                           [tf.shape(clips)[0], h, w, t * c])
         clips = tf.image.resize_bilinear(clips, (227, 227), align_corners=True)
-        clips = tf.transpose(tf.reshape(
-            clips,
-            [tf.shape(clips)[0], tf.shape(clips)[1], tf.shape(clips)[2], tf.shape(clips)[3], tf.shape(clips)[4]]),
-            [0, 3, 1, 2, 4])
+        clips = tf.transpose(tf.reshape(clips, [tf.shape(clips)[0], 227, 227, t, c]), [0, 3, 1, 2, 4])
         return clips

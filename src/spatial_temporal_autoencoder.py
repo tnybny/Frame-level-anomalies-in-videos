@@ -16,8 +16,9 @@ class SpatialTemporalAutoencoder(object):
     def __init__(self, data, alpha, lambd):
         self.ch = data.nchannels
         self.tvol = data.tvol
+        self.batch_size = data.batch_size
         self.x_ = data.next_batch
-        self.h, self.w = tf.shape(self.x_)[1], tf.shape(self.x_)[2]
+        self.h, self.w = tf.shape(self.x_)[2], tf.shape(self.x_)[3]
         self.handle = data.handle
         self.tr_iter = data.tr_iter
         self.te_iter = data.te_iter
@@ -109,11 +110,11 @@ class SpatialTemporalAutoencoder(object):
         :param shapes: list of shapes of convolved objects, used to inform deconvolution output shapes
         :return: convolved representation of shape (batch_size * self.tvol, h, w, c)
         """
-        _, _, h, w, c = x.get_shape().as_list()
+        h, w, c = tf.shape(x)[2], tf.shape(x)[3], tf.shape(x)[4]
         x = tf.reshape(x, shape=[-1, h, w, c])
         conv1 = self.conv2d(x, self.params['c_w1'], self.params['c_b1'], activation=tf.nn.tanh, strides=4,
                             phase=self.phase)
-        shapes.append(conv1.get_shape().as_list())
+        shapes.append([tf.shape(conv1)[0], tf.shape(conv1)[1], tf.shape(conv1)[2], tf.shape(conv1)[3]])
         conv2 = self.conv2d(conv1, self.params['c_w2'], self.params['c_b2'], activation=tf.nn.tanh, strides=2,
                             phase=self.phase)
         return conv2, shapes
@@ -124,14 +125,16 @@ class SpatialTemporalAutoencoder(object):
         :param x: convolved representation of input volume of shape (batch_size * self.tvol, h, w, c)
         :return: convLSTMed representation (batch_size, self.tvol, h, w, c)
         """
-        _, h, w, c = x.get_shape().as_list()
+        h, w, c = tf.shape(x)[1], tf.shape(x)[2], tf.shape(x)[3]
         x = tf.reshape(x, shape=[-1, self.tvol, h, w, c])
         x = tf.unstack(x, axis=1)
         num_filters = [CLSTM1, CLSTM2, CLSTM3]
         filter_sizes = [[3, 3], [3, 3], [3, 3]]
         cell = tf.nn.rnn_cell.MultiRNNCell(
-            [ConvLSTMCell(shape=[h, w], num_filters=num_filters[i], filter_size=filter_sizes[i], layer_id=i)
+            [ConvLSTMCell(shape=[26, 26], num_filters=num_filters[i], filter_size=filter_sizes[i], layer_id=i)
              for i in range(len(num_filters))])
+        for i in range(len(x)):
+            x[i].set_shape([self.batch_size, 26, 26, CONV2])
         states_series, _ = tf.nn.static_rnn(cell, x, dtype=tf.float32)
         output = tf.transpose(tf.stack(states_series, axis=0), [1, 0, 2, 3, 4])
         return output
@@ -143,10 +146,9 @@ class SpatialTemporalAutoencoder(object):
         :param shapes: list of shapes of convolved objects, used to inform deconvolution output shapes
         :return: deconvolved representation of shape (batch_size * self.tvol, HEIGHT, WEIGHT, NCHANNELS)
         """
-        _, _, h, w, c = x.get_shape().as_list()
+        batch_size, h, w, c = tf.shape(x)[0], tf.shape(x)[2], tf.shape(x)[3], tf.shape(x)[4]
         x = tf.reshape(x, shape=[-1, h, w, c])
         _, newh, neww, _ = shapes[-1]
-        batch_size = tf.shape(x)[0]
         deconv1 = self.deconv2d(x, self.params['c_w_2'], self.params['c_b_2'],
                                 [batch_size * self.tvol, newh, neww, DECONV1],
                                 activation=tf.nn.tanh, strides=2, phase=self.phase)
