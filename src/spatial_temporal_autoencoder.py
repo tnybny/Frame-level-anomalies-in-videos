@@ -9,7 +9,6 @@ CLSTM1 = 64
 CLSTM2 = 32
 CLSTM3 = 64
 DECONV1 = 128
-DECONV2 = 1
 
 
 class SpatialTemporalAutoencoder(object):
@@ -32,8 +31,8 @@ class SpatialTemporalAutoencoder(object):
             "c_b2": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[CONV2]), name="c_bias2"),
             "c_w_2": tf.get_variable("c_weight_2", shape=[5, 5, DECONV1, CLSTM3], initializer=w_init),
             "c_b_2": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[DECONV1]), name="c_bias_2"),
-            "c_w_1": tf.get_variable("c_weight_1", shape=[11, 11, DECONV2, DECONV1], initializer=w_init),
-            "c_b_1": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[DECONV2]), name="c_bias_1")
+            "c_w_1": tf.get_variable("c_weight_1", shape=[11, 11, self.ch, DECONV1], initializer=w_init),
+            "c_b_1": tf.Variable(tf.constant(0.01, dtype=tf.float32, shape=[self.ch]), name="c_bias_1")
         }
 
         shapes = []
@@ -134,7 +133,7 @@ class SpatialTemporalAutoencoder(object):
             [ConvLSTMCell(shape=[26, 26], num_filters=num_filters[i], filter_size=filter_sizes[i], layer_id=i)
              for i in range(len(num_filters))])
         for i in range(len(x)):
-            x[i].set_shape([self.batch_size, 26, 26, CONV2])
+            x[i].set_shape([None, 26, 26, CONV2])
         states_series, _ = tf.nn.static_rnn(cell, x, dtype=tf.float32)
         output = tf.transpose(tf.stack(states_series, axis=0), [1, 0, 2, 3, 4])
         return output
@@ -153,7 +152,7 @@ class SpatialTemporalAutoencoder(object):
                                 [batch_size * self.tvol, newh, neww, DECONV1],
                                 activation=tf.nn.tanh, strides=2, phase=self.phase)
         deconv2 = self.deconv2d(deconv1, self.params['c_w_1'], self.params['c_b_1'],
-                                [batch_size * self.tvol, self.h, self.w, DECONV2],
+                                [batch_size * self.tvol, self.h, self.w, self.ch],
                                 activation=tf.nn.tanh, strides=4, phase=self.phase, last=True)
         return deconv2
 
