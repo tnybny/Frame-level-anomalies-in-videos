@@ -3,7 +3,7 @@
 Perform anomaly detection in videos using neural network architectures such as 2D convolutional auto-encoder[2] and spatial-temporal auto-encoder[3]. The focus is on finding frame-level anomalies in the UCSD Ped1 dataset[1, 5].
 
 ## Prerequisites
-1. Python 2.7+
+1. Python 2.7
     * PIL
     * glob
     * cv2
@@ -11,7 +11,7 @@ Perform anomaly detection in videos using neural network architectures such as 2
     * matplotlib
     * sklearn
 2. CUDA Toolkit 8+
-3. TensorFlow 1.3+
+3. TensorFlow 1.3 <= __version__ <= 1.12 (?)
 
 ## List of files and their functions
 1. config/
